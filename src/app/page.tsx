@@ -105,7 +105,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl p-5 sm:p-8">
           <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <LocalDateTime />
-            <a href="/pilot"><Button><Plus /> Add lead</Button></a>
+            <div className="flex flex-wrap gap-2"><a href="/jobs"><Button variant="outline"><CalendarDays /> Daily Jobs</Button></a><a href="/pilot"><Button><Plus /> Add lead</Button></a></div>
           </div>
 
           <DashboardMetrics />
