@@ -105,7 +105,7 @@ export default function Home() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" size="icon"><Bell /></Button>
-            <div className="grid size-9 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">AB</div>
+            <div className="grid size-9 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">SB</div>
           </div>
         </header>
 
@@ -113,7 +113,7 @@ export default function Home() {
           <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <p className="mb-2 text-sm font-medium text-primary">THURSDAY, JULY 30</p>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Good morning, Aman.</h1>
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Good morning, Sahil.</h1>
               <p className="mt-2 text-muted-foreground">Here&apos;s what&apos;s moving across your fibre pipeline.</p>
             </div>
             <a href="/pilot"><Button><Plus /> Add lead</Button></a>
