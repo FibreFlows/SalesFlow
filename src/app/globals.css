@@ -105,5 +105,8 @@ html[data-design="theme-3"] .mobile-command-card .bg-primary\/10 { background-co
   .dashboard-metrics { grid-template-columns: repeat(4, minmax(7.25rem, 1fr)); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: .25rem; scrollbar-width: none; }
   .dashboard-metrics::-webkit-scrollbar { display: none; }
   .dashboard-metrics > * { scroll-snap-align: start; }
+  .product-strip { scrollbar-width: none; scroll-snap-type: x mandatory; }
+  .product-strip::-webkit-scrollbar { display: none; }
+  .product-strip > * { scroll-snap-align: start; }
   [data-design="theme-3"] .dashboard-metrics > * { background: linear-gradient(145deg, var(--card), color-mix(in oklch, var(--card), var(--primary) 5%)); }
 }
