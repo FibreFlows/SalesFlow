@@ -30,6 +30,8 @@ type Lead = {
   current_monthly_cost: number; customer_rating: number | null; installation_completed: boolean | null; last_contacted_at: string | null; next_follow_up_at: string | null; assigned_salesperson: string;
   created_at: string;
   updated_at: string;
+  converted_at: string | null;
+  installation_completed_at: string | null;
 };
 
 const STORAGE_KEY = "salesflow.pilot.leads.v1";
@@ -125,13 +127,16 @@ export function PilotClient() {
     setMessage("");
     const now = new Date().toISOString();
     if (editingId) {
-      const updated = { ...form, possible_rgu_sale: Number(form.possible_rgu_sale || 0) || null, current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: form.installation_completed === "" ? null : form.installation_completed === "yes", contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, updated_at: now };
+      const previous = leads.find((lead) => lead.id === editingId);
+      const installationCompleted = form.installation_completed === "" ? null : form.installation_completed === "yes";
+      const updated = { ...form, possible_rgu_sale: Number(form.possible_rgu_sale || 0) || null, current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: installationCompleted, converted_at: form.status === "converted" ? previous?.converted_at || now : null, installation_completed_at: installationCompleted ? previous?.installation_completed_at || now : null, contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, updated_at: now };
       const { error } = await createClient().from("leads").update(updated).eq("id", editingId);
       if (error) { setMessage(`Could not save: ${error.message}`); setSaving(false); return; }
       setLeads((current) => current.map((lead) => lead.id === editingId ? { ...lead, ...updated } : lead));
     } else {
       if (!user) { setMessage("Your session expired. Please sign in again."); setSaving(false); return; }
-      const lead = { id: crypto.randomUUID(), owner_id: user.id, ...form, estimated_value: 0, possible_rgu_sale: Number(form.possible_rgu_sale || 0) || null, current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: form.installation_completed === "" ? null : form.installation_completed === "yes", contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, created_at: now, updated_at: now };
+      const installationCompleted = form.installation_completed === "" ? null : form.installation_completed === "yes";
+      const lead = { id: crypto.randomUUID(), owner_id: user.id, ...form, estimated_value: 0, possible_rgu_sale: Number(form.possible_rgu_sale || 0) || null, current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: installationCompleted, converted_at: form.status === "converted" ? now : null, installation_completed_at: installationCompleted ? now : null, contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, created_at: now, updated_at: now };
       const { error } = await createClient().from("leads").insert(lead);
       if (error) { setMessage(`Could not save: ${error.message}`); setSaving(false); return; }
       setLeads((current) => [lead, ...current]);

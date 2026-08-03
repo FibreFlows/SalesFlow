@@ -3,8 +3,6 @@ import {
   Bell,
   Building2,
   CalendarDays,
-  CircleDollarSign,
-  Gauge,
   LayoutDashboard,
   Menu,
   Plus,
@@ -21,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LocalDateTime } from "@/components/local-date-time";
+import { DashboardMetrics } from "@/components/dashboard-metrics";
 
 const nav = [
   [LayoutDashboard, "Overview", true, "/"],
@@ -29,13 +28,6 @@ const nav = [
   [Target, "Pipeline", false, "#"],
   [CalendarDays, "Activities", false, "#"],
 ] as const;
-
-const metrics = [
-  { label: "Pipeline value", value: "$428.6K", detail: "+12.4% this month", icon: CircleDollarSign },
-  { label: "Qualified leads", value: "184", detail: "+23 this week", icon: Users },
-  { label: "Win rate", value: "31.8%", detail: "+4.2 pts vs last month", icon: Target },
-  { label: "Avg. sales cycle", value: "18 days", detail: "3 days faster", icon: Gauge },
-];
 
 const opportunities = [
   { company: "Northstar Logistics", contact: "Maya Chen", stage: "Proposal", value: "$48,000", next: "Today" },
@@ -116,20 +108,7 @@ export default function Home() {
             <a href="/pilot"><Button><Plus /> Add lead</Button></a>
           </div>
 
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {metrics.map(({ label, value, detail, icon: Icon }) => (
-              <Card key={label}>
-                <CardContent className="p-5">
-                  <div className="mb-5 flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">{label}</p>
-                    <Icon className="size-4 text-primary" />
-                  </div>
-                  <p className="text-2xl font-semibold tracking-tight">{value}</p>
-                  <p className="mt-2 text-xs text-primary">{detail}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </section>
+          <DashboardMetrics />
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[1.65fr_1fr]">
             <Card>
