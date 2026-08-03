@@ -11,6 +11,7 @@ import {
   Settings,
   Sparkles,
   Target,
+  Tags,
   Users,
   Wifi,
 } from "lucide-react";
@@ -22,13 +23,14 @@ import { DashboardMetrics } from "@/components/dashboard-metrics";
 import { ActiveOpportunities } from "@/components/active-opportunities";
 import { ProductSalesTracker } from "@/components/product-sales-tracker";
 import { AppearanceControl } from "@/components/appearance-control";
-import { MobileDashboardHero } from "@/components/mobile-dashboard-hero";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { BestPlans } from "@/components/best-plans";
 
 const nav = [
   [LayoutDashboard, "Overview", true, "/"],
   [Users, "Leads", false, "/pilot"],
   [Target, "Sales Opportunities", false, "/opportunities"],
+  [Tags, "Deals & Plans", false, "/deals"],
   [Building2, "Accounts", false, "#"],
   [Target, "Pipeline", false, "#"],
   [CalendarDays, "Workload", false, "/jobs"],
@@ -91,7 +93,7 @@ export default function Home() {
             <LocalDateTime />
           </div>
 
-          <div className="mb-4 lg:hidden"><MobileDashboardHero /></div>
+          <BestPlans />
           <div className="mb-5 grid grid-cols-2 gap-3 lg:hidden">
             <a href="/pilot" className="flex min-h-20 items-center gap-3 rounded-2xl bg-primary px-4 font-semibold text-primary-foreground shadow-lg shadow-primary/15"><span className="grid size-9 place-items-center rounded-xl bg-white/15"><Plus className="size-5" /></span><span>Add lead<small className="mt-0.5 block font-normal opacity-80">New opportunity</small></span></a>
             <a href="/jobs" className="flex min-h-20 items-center gap-3 rounded-2xl bg-[oklch(.43_.15_150)] px-4 font-semibold text-white shadow-lg shadow-primary/15"><span className="grid size-9 place-items-center rounded-xl bg-white/15"><CalendarDays className="size-5" /></span><span>Add workload<small className="mt-0.5 block font-normal opacity-80">Record a job</small></span></a>
