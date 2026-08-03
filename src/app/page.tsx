@@ -3,6 +3,7 @@ import {
   Bell,
   Building2,
   CalendarDays,
+  FileText,
   LayoutDashboard,
   Menu,
   Plus,
@@ -28,6 +29,7 @@ const nav = [
   [Building2, "Accounts", false, "#"],
   [Target, "Pipeline", false, "#"],
   [CalendarDays, "Daily Jobs", false, "/jobs"],
+  [FileText, "Reports", false, "/reports"],
 ] as const;
 
 const opportunities = [
@@ -106,7 +108,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl p-5 sm:p-8">
           <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <LocalDateTime />
-            <div className="flex flex-wrap gap-2"><a href="/jobs"><Button variant="outline"><CalendarDays /> Daily Jobs</Button></a><a href="/opportunities"><Button variant="outline"><Target /> Sales Opportunities</Button></a><a href="/pilot"><Button><Plus /> Add lead</Button></a></div>
+            <div className="flex flex-wrap gap-2"><a href="/jobs"><Button variant="outline"><CalendarDays /> Daily Jobs</Button></a><a href="/opportunities"><Button variant="outline"><Target /> Sales Opportunities</Button></a><a href="/reports"><Button variant="outline"><FileText /> Reports</Button></a><a href="/pilot"><Button><Plus /> Add lead</Button></a></div>
           </div>
 
           <DashboardMetrics />
