@@ -82,14 +82,13 @@ export default function Home() {
           <div className="ml-auto flex items-center gap-2">
             <AppearanceControl />
             <Button variant="ghost" size="icon"><Bell /></Button>
-            <div className="grid size-9 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">SB</div>
+            <a href="/profile" aria-label="Open Sahil Bhatia profile" title="Profile" className="grid size-9 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground transition hover:ring-4 hover:ring-primary/15">SB</a>
           </div>
         </header>
 
         <div className="mx-auto max-w-7xl p-4 pb-28 sm:p-8 lg:pb-8">
-          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="mb-8">
             <LocalDateTime />
-            <div className="hidden flex-wrap gap-2 sm:flex"><a href="/jobs"><Button><CalendarDays /> Workload</Button></a><a href="/opportunities"><Button variant="outline"><Target /> Sales Opportunities</Button></a><a href="/reports"><Button variant="outline"><FileText /> Reports</Button></a><a href="/pilot"><Button><Plus /> Add lead</Button></a></div>
           </div>
 
           <div className="mb-4 lg:hidden"><MobileDashboardHero /></div>
