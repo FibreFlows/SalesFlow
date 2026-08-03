@@ -82,7 +82,10 @@ export function PilotClient() {
     };
     supabase.auth.getUser().then(({ data }) => load(data.user));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => load(session?.user || null));
-    return () => data.subscription.unsubscribe();
+    const refresh = () => supabase.auth.getUser().then(({ data: auth }) => load(auth.user));
+    const interval = window.setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => { data.subscription.unsubscribe(); window.clearInterval(interval); window.removeEventListener("focus", refresh); };
   }, []);
 
   useEffect(() => {

@@ -11,7 +11,7 @@ export function DashboardMetrics() {
   const [counts, setCounts] = useState<MetricCounts>({ julySales: 0, yearSales: 0, monthJobs: 0, yearJobs: 0 });
 
   useEffect(() => {
-    const frame = requestAnimationFrame(async () => {
+    const load = async () => {
       const supabase = createClient();
       const [{ data: leads }, { data: jobs }] = await Promise.all([
         supabase.from("leads").select("converted_at"),
@@ -33,8 +33,11 @@ export function DashboardMetrics() {
         monthJobs: completedJobs.filter((job) => { const date = parts(job.completed_at); return date?.year === year && date.month === month; }).length,
         yearJobs: completedJobs.filter((job) => parts(job.completed_at)?.year === year).length,
       });
-    });
-    return () => cancelAnimationFrame(frame);
+    };
+    const frame = requestAnimationFrame(load);
+    const interval = window.setInterval(load, 15000);
+    window.addEventListener("focus", load);
+    return () => { cancelAnimationFrame(frame); window.clearInterval(interval); window.removeEventListener("focus", load); };
   }, []);
 
   const metrics = [
