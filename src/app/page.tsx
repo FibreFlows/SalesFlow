@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { LocalDateTime } from "@/components/local-date-time";
 import { DashboardMetrics } from "@/components/dashboard-metrics";
 import { ActiveOpportunities } from "@/components/active-opportunities";
+import { ProductSalesTracker } from "@/components/product-sales-tracker";
 
 const nav = [
   [LayoutDashboard, "Overview", true, "/"],
@@ -94,6 +95,7 @@ export default function Home() {
           </div>
 
           <DashboardMetrics />
+          <ProductSalesTracker />
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[1.65fr_1fr]">
             <ActiveOpportunities />

@@ -14,8 +14,8 @@ export function DashboardMetrics() {
     const load = async () => {
       const supabase = createClient();
       const [{ data: leads }, { data: jobs }] = await Promise.all([
-        supabase.from("leads").select("converted_at,sales_count"),
-        supabase.from("jobs").select("status,completed_at,sale_converted_at,sales_count"),
+        supabase.from("leads").select("id,converted_at,sales_count"),
+        supabase.from("jobs").select("lead_id,status,completed_at,sale_converted_at,sales_count"),
       ]);
       const now = new Date();
       const year = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", year: "numeric" }).format(now));
@@ -27,7 +27,8 @@ export function DashboardMetrics() {
         year: Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", year: "numeric" }).format(new Date(value))),
         month: Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", month: "numeric" }).format(new Date(value))),
       } : null;
-      const rows = leads || [];
+      const linkedLeadIds = new Set((jobs || []).filter((job) => job.sale_converted_at).map((job) => job.lead_id).filter(Boolean));
+      const rows = (leads || []).filter((lead) => !linkedLeadIds.has(lead.id));
       const allJobs = jobs || [];
       const completedJobs = allJobs.filter((job) => job.status === "completed");
       const units = (row: { sales_count?: number | null }) => Math.max(Number(row.sales_count || 0), 1);
