@@ -6,7 +6,6 @@ import {
   FileText,
   LayoutDashboard,
   Menu,
-  Plus,
   Search,
   Settings,
   Sparkles,
@@ -94,10 +93,6 @@ export default function Home() {
           </div>
 
           <BestPlans />
-          <div className="mb-5 grid grid-cols-2 gap-3 lg:hidden">
-            <a href="/pilot" className="flex min-h-20 items-center gap-3 rounded-2xl bg-primary px-4 font-semibold text-primary-foreground shadow-lg shadow-primary/15"><span className="grid size-9 place-items-center rounded-xl bg-white/15"><Plus className="size-5" /></span><span>Add lead<small className="mt-0.5 block font-normal opacity-80">New opportunity</small></span></a>
-            <a href="/jobs" className="flex min-h-20 items-center gap-3 rounded-2xl bg-[oklch(.43_.15_150)] px-4 font-semibold text-white shadow-lg shadow-primary/15"><span className="grid size-9 place-items-center rounded-xl bg-white/15"><CalendarDays className="size-5" /></span><span>Add workload<small className="mt-0.5 block font-normal opacity-80">Record a job</small></span></a>
-          </div>
           <a href="/pilot?voice=1" className="mb-5 flex min-h-15 items-center gap-3 rounded-2xl border border-orange-300/70 bg-orange-50 px-4 text-sm dark:border-orange-700 dark:bg-orange-950/25 lg:hidden"><span className="grid size-9 place-items-center rounded-xl bg-orange-500 text-white"><Mic className="size-5" /></span><span className="flex-1"><strong className="block text-foreground">Voice entry</strong><span className="text-xs text-muted-foreground">Speak raw details, then verify the orange draft</span></span><span className="font-semibold text-orange-600">Start</span></a>
 
           <DashboardMetrics />
