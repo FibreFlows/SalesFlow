@@ -1,5 +1,4 @@
 import {
-  ArrowUpRight,
   Bell,
   Building2,
   CalendarDays,
@@ -15,12 +14,12 @@ import {
   Wifi,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LocalDateTime } from "@/components/local-date-time";
 import { DashboardMetrics } from "@/components/dashboard-metrics";
+import { ActiveOpportunities } from "@/components/active-opportunities";
 
 const nav = [
   [LayoutDashboard, "Overview", true, "/"],
@@ -32,28 +31,11 @@ const nav = [
   [FileText, "Reports", false, "/reports"],
 ] as const;
 
-const opportunities = [
-  { company: "Northstar Logistics", contact: "Maya Chen", stage: "Proposal", value: "$48,000", next: "Today" },
-  { company: "Cedar & Stone Group", contact: "Evan Brooks", stage: "Qualified", value: "$31,500", next: "Tomorrow" },
-  { company: "Peakline Dental", contact: "Sofia Patel", stage: "Discovery", value: "$22,800", next: "Aug 3" },
-  { company: "Harbour Foods", contact: "Noah Williams", stage: "Negotiation", value: "$67,000", next: "Aug 5" },
-];
-
 const activity = [
   { initials: "MC", title: "Proposal opened", body: "Northstar Logistics reviewed the Fibre 3G proposal.", time: "12 min" },
   { initials: "EB", title: "Call completed", body: "Discovery call notes added to Cedar & Stone Group.", time: "1 hr" },
   { initials: "SP", title: "Lead qualified", body: "Peakline Dental moved into the active pipeline.", time: "3 hr" },
 ];
-
-function StageBadge({ stage }: { stage: string }) {
-  const styles: Record<string, string> = {
-    Proposal: "bg-blue-500/10 text-blue-300 border-blue-500/20",
-    Qualified: "bg-violet-500/10 text-violet-300 border-violet-500/20",
-    Discovery: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-    Negotiation: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-  };
-  return <Badge className={styles[stage]}>{stage}</Badge>;
-}
 
 export default function Home() {
   return (
@@ -114,34 +96,7 @@ export default function Home() {
           <DashboardMetrics />
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[1.65fr_1fr]">
-            <Card>
-              <CardHeader className="flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Active opportunities</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">Highest-priority deals requiring attention.</p>
-                </div>
-                <Button variant="ghost" size="sm">View pipeline <ArrowUpRight /></Button>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b border-border text-xs text-muted-foreground">
-                      <tr><th className="pb-3 font-medium">Account</th><th className="pb-3 font-medium">Stage</th><th className="pb-3 font-medium">Value</th><th className="pb-3 text-right font-medium">Next step</th></tr>
-                    </thead>
-                    <tbody>
-                      {opportunities.map((item) => (
-                        <tr key={item.company} className="border-b border-border/60 last:border-0">
-                          <td className="py-4"><p className="font-medium">{item.company}</p><p className="mt-1 text-xs text-muted-foreground">{item.contact}</p></td>
-                          <td className="py-4"><StageBadge stage={item.stage} /></td>
-                          <td className="py-4 font-mono text-xs">{item.value}</td>
-                          <td className="py-4 text-right text-muted-foreground">{item.next}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            <ActiveOpportunities />
 
             <Card>
               <CardHeader>
