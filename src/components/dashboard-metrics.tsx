@@ -52,5 +52,5 @@ export function DashboardMetrics() {
     { label: "Sales last month", value: counts.lastMonthSales, icon: CheckCircle2 },
   ];
 
-  return <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(({ label, value, icon: Icon }) => <Card key={label}><CardContent className="p-5"><div className="mb-5 flex items-center justify-between"><p className="text-sm text-muted-foreground">{label}</p><Icon className="size-4 text-primary" /></div><p className="text-3xl font-semibold tracking-tight">{value}</p><p className="mt-2 text-xs text-primary">Live from your cloud records</p></CardContent></Card>)}</section>;
+  return <section className="dashboard-metrics grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">{metrics.map(({ label, value, icon: Icon }) => <Card key={label} className="rounded-2xl"><CardContent className="p-4 sm:p-5"><div className="mb-3 flex items-start justify-between gap-2 sm:mb-5"><p className="text-xs leading-4 text-muted-foreground sm:text-sm">{label}</p><Icon className="size-4 shrink-0 text-primary" /></div><p className="text-2xl font-semibold tracking-tight sm:text-3xl">{value}</p><p className="mt-2 hidden text-xs text-primary sm:block">Live from your cloud records</p></CardContent></Card>)}</section>;
 }

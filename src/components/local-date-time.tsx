@@ -24,5 +24,5 @@ export function LocalDateTime() {
     return () => { cancelAnimationFrame(frame); window.clearInterval(timer); };
   }, []);
 
-  return <div><p className="mb-2 text-sm font-medium uppercase text-primary">{parts ? `${parts.date} · ${parts.time}` : "Edmonton local time"}</p><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{parts?.greeting || "Welcome"}, Sahil.</h1><p className="mt-2 text-muted-foreground">Here&apos;s what&apos;s moving across your fibre pipeline.</p></div>;
+  return <div><p className="mb-2 text-xs font-bold uppercase tracking-[.08em] text-primary sm:text-sm">{parts ? `${parts.date} · ${parts.time}` : "Edmonton local time"}</p><h1 className="text-[2rem] font-semibold tracking-tight sm:text-4xl">{parts?.greeting || "Welcome"}, Sahil.</h1><p className="mt-1.5 text-sm text-muted-foreground sm:mt-2 sm:text-base">Here&apos;s what&apos;s moving across your fibre pipeline.</p></div>;
 }

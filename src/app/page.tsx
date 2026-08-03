@@ -1,5 +1,6 @@
 import {
   Bell,
+  Mic,
   Building2,
   CalendarDays,
   FileText,
@@ -21,6 +22,9 @@ import { LocalDateTime } from "@/components/local-date-time";
 import { DashboardMetrics } from "@/components/dashboard-metrics";
 import { ActiveOpportunities } from "@/components/active-opportunities";
 import { ProductSalesTracker } from "@/components/product-sales-tracker";
+import { AppearanceControl } from "@/components/appearance-control";
+import { MobileDashboardHero } from "@/components/mobile-dashboard-hero";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
 const nav = [
   [LayoutDashboard, "Overview", true, "/"],
@@ -83,16 +87,24 @@ export default function Home() {
             <Input className="pl-9" placeholder="Search leads, accounts, or opportunities..." />
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <AppearanceControl />
             <Button variant="ghost" size="icon"><Bell /></Button>
             <div className="grid size-9 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">SB</div>
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl p-5 sm:p-8">
+        <div className="mx-auto max-w-7xl p-4 pb-28 sm:p-8 lg:pb-8">
           <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <LocalDateTime />
-            <div className="flex flex-wrap gap-2"><a href="/jobs"><Button><CalendarDays /> Workload</Button></a><a href="/opportunities"><Button variant="outline"><Target /> Sales Opportunities</Button></a><a href="/reports"><Button variant="outline"><FileText /> Reports</Button></a><a href="/pilot"><Button><Plus /> Add lead</Button></a></div>
+            <div className="hidden flex-wrap gap-2 sm:flex"><a href="/jobs"><Button><CalendarDays /> Workload</Button></a><a href="/opportunities"><Button variant="outline"><Target /> Sales Opportunities</Button></a><a href="/reports"><Button variant="outline"><FileText /> Reports</Button></a><a href="/pilot"><Button><Plus /> Add lead</Button></a></div>
           </div>
+
+          <div className="mb-4 lg:hidden"><MobileDashboardHero /></div>
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:hidden">
+            <a href="/pilot" className="flex min-h-20 items-center gap-3 rounded-2xl bg-primary px-4 font-semibold text-primary-foreground shadow-lg shadow-primary/15"><span className="grid size-9 place-items-center rounded-xl bg-white/15"><Plus className="size-5" /></span><span>Add lead<small className="mt-0.5 block font-normal opacity-80">New opportunity</small></span></a>
+            <a href="/jobs" className="flex min-h-20 items-center gap-3 rounded-2xl bg-[oklch(.43_.15_150)] px-4 font-semibold text-white shadow-lg shadow-primary/15"><span className="grid size-9 place-items-center rounded-xl bg-white/15"><CalendarDays className="size-5" /></span><span>Add workload<small className="mt-0.5 block font-normal opacity-80">Record a job</small></span></a>
+          </div>
+          <a href="/pilot?voice=1" className="mb-5 flex min-h-15 items-center gap-3 rounded-2xl border border-orange-300/70 bg-orange-50 px-4 text-sm dark:border-orange-700 dark:bg-orange-950/25 lg:hidden"><span className="grid size-9 place-items-center rounded-xl bg-orange-500 text-white"><Mic className="size-5" /></span><span className="flex-1"><strong className="block text-foreground">Voice entry</strong><span className="text-xs text-muted-foreground">Speak raw details, then verify the orange draft</span></span><span className="font-semibold text-orange-600">Start</span></a>
 
           <DashboardMetrics />
           <ProductSalesTracker />
@@ -120,6 +132,7 @@ export default function Home() {
           </section>
         </div>
       </main>
+      <MobileBottomNav />
     </div>
   );
 }
