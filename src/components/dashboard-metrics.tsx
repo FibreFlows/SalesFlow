@@ -12,7 +12,11 @@ export function DashboardMetrics() {
 
   useEffect(() => {
     const frame = requestAnimationFrame(async () => {
-      const { data } = await createClient().from("leads").select("converted_at,installation_completed_at");
+      const supabase = createClient();
+      const [{ data: leads }, { data: jobs }] = await Promise.all([
+        supabase.from("leads").select("converted_at"),
+        supabase.from("jobs").select("completed_at").eq("status", "completed"),
+      ]);
       const now = new Date();
       const year = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", year: "numeric" }).format(now));
       const month = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", month: "numeric" }).format(now));
@@ -20,12 +24,13 @@ export function DashboardMetrics() {
         year: Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", year: "numeric" }).format(new Date(value))),
         month: Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", month: "numeric" }).format(new Date(value))),
       } : null;
-      const rows = data || [];
+      const rows = leads || [];
+      const completedJobs = jobs || [];
       setCounts({
         julySales: rows.filter((row) => { const date = parts(row.converted_at); return date?.year === year && date.month === 7; }).length,
         yearSales: rows.filter((row) => parts(row.converted_at)?.year === year).length,
-        monthJobs: rows.filter((row) => { const date = parts(row.installation_completed_at); return date?.year === year && date.month === month; }).length,
-        yearJobs: rows.filter((row) => parts(row.installation_completed_at)?.year === year).length,
+        monthJobs: completedJobs.filter((job) => { const date = parts(job.completed_at); return date?.year === year && date.month === month; }).length,
+        yearJobs: completedJobs.filter((job) => parts(job.completed_at)?.year === year).length,
       });
     });
     return () => cancelAnimationFrame(frame);

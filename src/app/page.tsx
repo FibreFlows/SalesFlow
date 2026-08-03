@@ -26,7 +26,7 @@ const nav = [
   [Users, "Leads", false, "/pilot"],
   [Building2, "Accounts", false, "#"],
   [Target, "Pipeline", false, "#"],
-  [CalendarDays, "Activities", false, "#"],
+  [CalendarDays, "Daily Jobs", false, "/jobs"],
 ] as const;
 
 const opportunities = [
