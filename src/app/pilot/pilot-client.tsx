@@ -3,6 +3,8 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Download, FileJson, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +43,10 @@ function csvCell(value: string | number) {
 }
 
 export function PilotClient() {
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -49,17 +55,23 @@ export function PilotClient() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setLeads(JSON.parse(stored) as Lead[]);
-    } finally {
+    const supabase = createClient();
+    const load = async (activeUser: User | null) => {
+      setUser(activeUser);
+      if (!activeUser) { setReady(true); return; }
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]") as Lead[];
+      if (stored.length) {
+        const { error } = await supabase.from("leads").upsert(stored.map((lead) => ({ ...lead, owner_id: activeUser.id })));
+        if (!error) localStorage.removeItem(STORAGE_KEY);
+      }
+      const { data, error } = await supabase.from("leads").select("id,first_name,last_name,company,email,phone,source,status,estimated_value,notes,created_at,updated_at").order("created_at", { ascending: false });
+      if (error) setMessage(error.message); else setLeads((data || []) as Lead[]);
       setReady(true);
-    }
+    };
+    supabase.auth.getUser().then(({ data }) => load(data.user));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => load(session?.user || null));
+    return () => data.subscription.unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (ready) localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
-  }, [leads, ready]);
 
   const filteredLeads = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -67,16 +79,29 @@ export function PilotClient() {
     return leads.filter((lead) => [lead.first_name, lead.last_name, lead.company, lead.email, lead.phone].some((value) => value.toLowerCase().includes(needle)));
   }, [leads, query]);
 
-  function submitLead(event: FormEvent<HTMLFormElement>) {
+  async function submitLead(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const now = new Date().toISOString();
     if (editingId) {
-      setLeads((current) => current.map((lead) => lead.id === editingId ? { ...lead, ...form, estimated_value: Number(form.estimated_value || 0), updated_at: now } : lead));
+      const updated = { ...form, estimated_value: Number(form.estimated_value || 0), updated_at: now };
+      const { error } = await createClient().from("leads").update(updated).eq("id", editingId);
+      if (error) { setMessage(error.message); return; }
+      setLeads((current) => current.map((lead) => lead.id === editingId ? { ...lead, ...updated } : lead));
     } else {
-      setLeads((current) => [{ id: crypto.randomUUID(), ...form, estimated_value: Number(form.estimated_value || 0), created_at: now, updated_at: now }, ...current]);
+      if (!user) return;
+      const lead = { id: crypto.randomUUID(), owner_id: user.id, ...form, estimated_value: Number(form.estimated_value || 0), created_at: now, updated_at: now };
+      const { error } = await createClient().from("leads").insert(lead);
+      if (error) { setMessage(error.message); return; }
+      setLeads((current) => [lead, ...current]);
     }
     setEditingId(null);
     setForm(EMPTY_FORM);
+  }
+
+  async function authenticate(mode: "signin" | "signup") {
+    const supabase = createClient();
+    const result = mode === "signin" ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/pilot` } });
+    if (result.error) setMessage(result.error.message); else if (mode === "signup" && !result.data.session) setMessage("Check your email to confirm the account, then sign in.");
   }
 
   function editLead(lead: Lead) {
@@ -103,6 +128,8 @@ export function PilotClient() {
     setLeads(payload.leads);
     event.target.value = "";
   }
+
+  if (ready && !user) return <main className="grid min-h-screen place-items-center bg-background p-5 text-foreground"><Card className="w-full max-w-md"><CardHeader><Badge className="w-fit border-primary/30 bg-primary/10 text-primary">CLOUD DATABASE</Badge><CardTitle className="pt-3 text-2xl">Sign in to SalesFlow</CardTitle></CardHeader><CardContent className="space-y-3"><Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} /><Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />{message ? <p className="text-sm text-primary">{message}</p> : null}<Button className="w-full" onClick={() => authenticate("signin")}>Sign in</Button><Button className="w-full" variant="outline" onClick={() => authenticate("signup")}>Create account</Button></CardContent></Card></main>;
 
   return (
     <main className="min-h-screen bg-background p-5 text-foreground sm:p-8">
