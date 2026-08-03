@@ -22,6 +22,7 @@ type Lead = {
   source: string;
   status: LeadStatus;
   estimated_value: number;
+  possible_rgu_sale: number | null;
   notes: string;
   ncid: string; ecid: string; ban: string; mobility_ban: string; secondary_phone: string; address: string;
   preferred_contact_method: string; best_contact_time: string; current_services: string[]; sale_scope: string[];
@@ -33,7 +34,7 @@ type Lead = {
 
 const STORAGE_KEY = "salesflow.pilot.leads.v1";
 const SERVICES = ["Fibre internet", "Copper internet", "Optik TV", "Home phone", "Security", "Mobility"];
-const EMPTY_FORM = { first_name: "", last_name: "", company: "", email: "", phone: "", secondary_phone: "", ncid: "", ecid: "", ban: "", mobility_ban: "", address: "", preferred_contact_method: "Phone", best_contact_time: "", current_services: [] as string[], sale_scope: [] as string[], is_with_competitor: false, competitor_name: "", is_in_contract: false, contract_expiry_date: "", current_monthly_cost: "", customer_rating: "", installation_completed: "", last_contacted_at: "", next_follow_up_at: "", assigned_salesperson: "", source: "", status: "new" as LeadStatus, estimated_value: "", notes: "" };
+const EMPTY_FORM = { first_name: "", last_name: "", company: "", email: "", phone: "", secondary_phone: "", ncid: "", ecid: "", ban: "", mobility_ban: "", address: "", preferred_contact_method: "Phone", best_contact_time: "", current_services: [] as string[], sale_scope: [] as string[], is_with_competitor: false, competitor_name: "", is_in_contract: false, contract_expiry_date: "", current_monthly_cost: "", customer_rating: "", installation_completed: "", last_contacted_at: "", next_follow_up_at: "", assigned_salesperson: "", source: "", status: "new" as LeadStatus, possible_rgu_sale: "", notes: "" };
 
 function downloadFile(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -107,7 +108,7 @@ export function PilotClient() {
     const now = analyticsNow;
     const sixtyDays = now + 60 * 86400000;
     return {
-      pipeline: leads.filter((lead) => lead.status !== "converted" && lead.status !== "unqualified").reduce((sum, lead) => sum + Number(lead.estimated_value || 0), 0),
+      pipeline: leads.filter((lead) => lead.status !== "converted" && lead.status !== "unqualified").reduce((sum, lead) => sum + Number(lead.possible_rgu_sale || 0), 0),
       followUps: leads.filter((lead) => lead.next_follow_up_at && new Date(lead.next_follow_up_at).getTime() <= now).length,
       contracts: leads.filter((lead) => lead.contract_expiry_date && new Date(lead.contract_expiry_date).getTime() >= now && new Date(lead.contract_expiry_date).getTime() <= sixtyDays).length,
       fibre: leads.filter((lead) => lead.current_services?.includes("Copper internet") && lead.sale_scope?.includes("Fibre internet")).length,
@@ -124,13 +125,13 @@ export function PilotClient() {
     setMessage("");
     const now = new Date().toISOString();
     if (editingId) {
-      const updated = { ...form, estimated_value: Number(form.estimated_value || 0), current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: form.installation_completed === "" ? null : form.installation_completed === "yes", contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, updated_at: now };
+      const updated = { ...form, possible_rgu_sale: Number(form.possible_rgu_sale || 0) || null, current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: form.installation_completed === "" ? null : form.installation_completed === "yes", contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, updated_at: now };
       const { error } = await createClient().from("leads").update(updated).eq("id", editingId);
       if (error) { setMessage(`Could not save: ${error.message}`); setSaving(false); return; }
       setLeads((current) => current.map((lead) => lead.id === editingId ? { ...lead, ...updated } : lead));
     } else {
       if (!user) { setMessage("Your session expired. Please sign in again."); setSaving(false); return; }
-      const lead = { id: crypto.randomUUID(), owner_id: user.id, ...form, estimated_value: Number(form.estimated_value || 0), current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: form.installation_completed === "" ? null : form.installation_completed === "yes", contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, created_at: now, updated_at: now };
+      const lead = { id: crypto.randomUUID(), owner_id: user.id, ...form, estimated_value: 0, possible_rgu_sale: Number(form.possible_rgu_sale || 0) || null, current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: form.installation_completed === "" ? null : form.installation_completed === "yes", contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, created_at: now, updated_at: now };
       const { error } = await createClient().from("leads").insert(lead);
       if (error) { setMessage(`Could not save: ${error.message}`); setSaving(false); return; }
       setLeads((current) => [lead, ...current]);
@@ -149,7 +150,7 @@ export function PilotClient() {
 
   function editLead(lead: Lead) {
     setEditingId(lead.id);
-    setForm({ ...EMPTY_FORM, ...lead, installation_completed: lead.installation_completed === null ? "" : lead.installation_completed ? "yes" : "no", contract_expiry_date: lead.contract_expiry_date?.slice(0, 10) || "", last_contacted_at: lead.last_contacted_at?.slice(0, 10) || "", next_follow_up_at: lead.next_follow_up_at?.slice(0, 10) || "", estimated_value: String(lead.estimated_value || ""), current_monthly_cost: String(lead.current_monthly_cost || ""), customer_rating: String(lead.customer_rating || "") });
+    setForm({ ...EMPTY_FORM, ...lead, installation_completed: lead.installation_completed === null ? "" : lead.installation_completed ? "yes" : "no", contract_expiry_date: lead.contract_expiry_date?.slice(0, 10) || "", last_contacted_at: lead.last_contacted_at?.slice(0, 10) || "", next_follow_up_at: lead.next_follow_up_at?.slice(0, 10) || "", possible_rgu_sale: String(lead.possible_rgu_sale || ""), current_monthly_cost: String(lead.current_monthly_cost || ""), customer_rating: String(lead.customer_rating || "") });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -158,7 +159,7 @@ export function PilotClient() {
   }
 
   function exportCsv() {
-    const fields: (keyof Lead)[] = ["id", "first_name", "last_name", "company", "ncid", "ecid", "ban", "mobility_ban", "email", "phone", "secondary_phone", "address", "preferred_contact_method", "best_contact_time", "current_services", "sale_scope", "is_with_competitor", "competitor_name", "is_in_contract", "contract_expiry_date", "current_monthly_cost", "customer_rating", "installation_completed", "source", "status", "estimated_value", "last_contacted_at", "next_follow_up_at", "assigned_salesperson", "notes", "created_at", "updated_at"];
+    const fields: (keyof Lead)[] = ["id", "first_name", "last_name", "company", "ncid", "ecid", "ban", "mobility_ban", "email", "phone", "secondary_phone", "address", "preferred_contact_method", "best_contact_time", "current_services", "sale_scope", "is_with_competitor", "competitor_name", "is_in_contract", "contract_expiry_date", "current_monthly_cost", "customer_rating", "installation_completed", "source", "status", "possible_rgu_sale", "last_contacted_at", "next_follow_up_at", "assigned_salesperson", "notes", "created_at", "updated_at"];
     const rows = [fields.join(","), ...leads.map((lead) => fields.map((field) => csvCell(lead[field])).join(","))];
     downloadFile(`salesflow-leads-${new Date().toISOString().slice(0, 10)}.csv`, rows.join("\r\n"), "text/csv;charset=utf-8");
   }
@@ -196,7 +197,7 @@ export function PilotClient() {
         </div>
 
         <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[['Active pipeline', `$${analytics.pipeline.toLocaleString()}`], ['Follow-ups due', analytics.followUps], ['Contracts expiring (60d)', analytics.contracts], ['Copper → Fibre', analytics.fibre]].map(([label, value]) => <Card key={label}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold">{value}</p></CardContent></Card>)}
+          {[["Possible RGU / Sale", analytics.pipeline], ['Follow-ups due', analytics.followUps], ['Contracts expiring (60d)', analytics.contracts], ['Copper → Fibre', analytics.fibre]].map(([label, value]) => <Card key={label}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold">{value}</p></CardContent></Card>)}
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
@@ -218,7 +219,7 @@ export function PilotClient() {
                 <div className="grid grid-cols-2 gap-3"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_in_contract} onChange={(e) => setForm({ ...form, is_in_contract: e.target.checked })} /> In contract</label><Input type="date" min="2000-01-01" max="2100-12-31" aria-label="Contract expiry" value={form.contract_expiry_date} onChange={(e) => setForm({ ...form, contract_expiry_date: e.target.value })} /></div>
                 <div className="grid grid-cols-2 gap-3"><Input type="number" min="0" step="0.01" aria-label="Customer current monthly bill" placeholder="Current monthly bill ($)" title="What the customer currently pays each month" value={form.current_monthly_cost} onChange={(e) => setForm({ ...form, current_monthly_cost: e.target.value })} /><select aria-label="Customer rating" className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={form.customer_rating} onChange={(e) => setForm({ ...form, customer_rating: e.target.value })}><option value="">Customer rating</option>{[1,2,3,4,5].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select></div>
                 <label className="block text-xs text-muted-foreground">Installation done by me?<select aria-label="Installation done by me" className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground" value={form.installation_completed} onChange={(e) => setForm({ ...form, installation_completed: e.target.value })}><option value="">Not specified</option><option value="yes">Yes</option><option value="no">No</option></select></label>
-                <div className="grid grid-cols-2 gap-3"><Input aria-label="Lead source" placeholder="Lead source (referral, door knock...)" title="Where this lead came from" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} /><Input type="number" min="0" step="0.01" aria-label="Estimated sale value" placeholder="Estimated sale value ($)" title="Expected value of this sale" value={form.estimated_value} onChange={(e) => setForm({ ...form, estimated_value: e.target.value })} /></div>
+                <div className="grid grid-cols-2 gap-3"><Input aria-label="Lead source" placeholder="Lead source (referral, door knock...)" title="Where this lead came from" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} /><Input type="number" min="0" step="1" aria-label="Possible RGU per sale" placeholder="Possible RGU / Sale" title="Number of possible revenue-generating units in this sale" value={form.possible_rgu_sale} onChange={(e) => setForm({ ...form, possible_rgu_sale: e.target.value })} /></div>
                 <select aria-label="Lead status" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })}><option value="new">New</option><option value="contacted">Contacted</option><option value="qualified">Qualified</option><option value="unqualified">Unqualified</option><option value="converted">Converted</option></select>
                 <div className="grid grid-cols-2 gap-3"><label className="text-xs text-muted-foreground">Last contacted date (optional)<Input className="mt-1" type="date" min="2000-01-01" max="2100-12-31" value={form.last_contacted_at} onChange={(e) => setForm({ ...form, last_contacted_at: e.target.value })} /></label><label className="text-xs text-muted-foreground">Next follow-up date (optional)<Input className="mt-1" type="date" min="2000-01-01" max="2100-12-31" value={form.next_follow_up_at} onChange={(e) => setForm({ ...form, next_follow_up_at: e.target.value })} /></label></div>
                 <Input aria-label="Assigned salesperson" placeholder="Assigned salesperson" value={form.assigned_salesperson} onChange={(e) => setForm({ ...form, assigned_salesperson: e.target.value })} />
