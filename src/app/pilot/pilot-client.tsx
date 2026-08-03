@@ -57,6 +57,7 @@ export function PilotClient() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [analyticsNow] = useState(() => Date.now());
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -102,21 +103,25 @@ export function PilotClient() {
 
   async function submitLead(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSaving(true);
+    setMessage("");
     const now = new Date().toISOString();
     if (editingId) {
       const updated = { ...form, estimated_value: Number(form.estimated_value || 0), current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, updated_at: now };
       const { error } = await createClient().from("leads").update(updated).eq("id", editingId);
-      if (error) { setMessage(error.message); return; }
+      if (error) { setMessage(`Could not save: ${error.message}`); setSaving(false); return; }
       setLeads((current) => current.map((lead) => lead.id === editingId ? { ...lead, ...updated } : lead));
     } else {
-      if (!user) return;
+      if (!user) { setMessage("Your session expired. Please sign in again."); setSaving(false); return; }
       const lead = { id: crypto.randomUUID(), owner_id: user.id, ...form, estimated_value: Number(form.estimated_value || 0), current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, created_at: now, updated_at: now };
       const { error } = await createClient().from("leads").insert(lead);
-      if (error) { setMessage(error.message); return; }
+      if (error) { setMessage(`Could not save: ${error.message}`); setSaving(false); return; }
       setLeads((current) => [lead, ...current]);
     }
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setMessage("Lead saved to the cloud.");
+    setSaving(false);
   }
 
   async function authenticate(mode: "signin" | "signup") {
@@ -127,7 +132,7 @@ export function PilotClient() {
 
   function editLead(lead: Lead) {
     setEditingId(lead.id);
-    setForm({ ...EMPTY_FORM, ...lead, contract_expiry_date: lead.contract_expiry_date || "", last_contacted_at: lead.last_contacted_at || "", next_follow_up_at: lead.next_follow_up_at || "", estimated_value: String(lead.estimated_value || ""), current_monthly_cost: String(lead.current_monthly_cost || ""), customer_rating: String(lead.customer_rating || "") });
+    setForm({ ...EMPTY_FORM, ...lead, contract_expiry_date: lead.contract_expiry_date?.slice(0, 10) || "", last_contacted_at: lead.last_contacted_at?.slice(0, 10) || "", next_follow_up_at: lead.next_follow_up_at?.slice(0, 10) || "", estimated_value: String(lead.estimated_value || ""), current_monthly_cost: String(lead.current_monthly_cost || ""), customer_rating: String(lead.customer_rating || "") });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -196,10 +201,11 @@ export function PilotClient() {
                 <div className="grid grid-cols-2 gap-3"><Input type="number" min="0" step="0.01" aria-label="Current monthly cost" placeholder="Current monthly cost" value={form.current_monthly_cost} onChange={(e) => setForm({ ...form, current_monthly_cost: e.target.value })} /><select aria-label="Customer rating" className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={form.customer_rating} onChange={(e) => setForm({ ...form, customer_rating: e.target.value })}><option value="">Customer rating</option>{[1,2,3,4,5].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select></div>
                 <div className="grid grid-cols-2 gap-3"><Input aria-label="Source" placeholder="Source" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} /><Input type="number" min="0" step="0.01" aria-label="Estimated value" placeholder="Value" value={form.estimated_value} onChange={(e) => setForm({ ...form, estimated_value: e.target.value })} /></div>
                 <select aria-label="Lead status" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })}><option value="new">New</option><option value="contacted">Contacted</option><option value="qualified">Qualified</option><option value="unqualified">Unqualified</option><option value="converted">Converted</option></select>
-                <div className="grid grid-cols-2 gap-3"><label className="text-xs text-muted-foreground">Last contacted<Input className="mt-1" type="datetime-local" value={form.last_contacted_at} onChange={(e) => setForm({ ...form, last_contacted_at: e.target.value })} /></label><label className="text-xs text-muted-foreground">Next follow-up<Input className="mt-1" type="datetime-local" value={form.next_follow_up_at} onChange={(e) => setForm({ ...form, next_follow_up_at: e.target.value })} /></label></div>
+                <div className="grid grid-cols-2 gap-3"><label className="text-xs text-muted-foreground">Last contacted date<Input className="mt-1" type="date" value={form.last_contacted_at} onChange={(e) => setForm({ ...form, last_contacted_at: e.target.value })} /></label><label className="text-xs text-muted-foreground">Next follow-up date<Input className="mt-1" type="date" value={form.next_follow_up_at} onChange={(e) => setForm({ ...form, next_follow_up_at: e.target.value })} /></label></div>
                 <Input aria-label="Assigned salesperson" placeholder="Assigned salesperson" value={form.assigned_salesperson} onChange={(e) => setForm({ ...form, assigned_salesperson: e.target.value })} />
                 <textarea aria-label="Notes" className="min-h-24 w-full rounded-md border border-input bg-transparent p-3 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-                <div className="flex gap-2"><Button className="flex-1" type="submit"><Plus /> {editingId ? "Save changes" : "Add lead"}</Button>{editingId ? <Button type="button" variant="ghost" onClick={() => { setEditingId(null); setForm(EMPTY_FORM); }}>Cancel</Button> : null}</div>
+                {message ? <p role="status" className={`rounded-md p-3 text-sm ${message.startsWith("Could not") ? "bg-red-50 text-red-700" : "bg-primary/10 text-primary"}`}>{message}</p> : null}
+                <div className="flex gap-2"><Button className="flex-1" type="submit" disabled={saving}><Plus /> {saving ? "Saving..." : editingId ? "Save changes" : "Add lead"}</Button>{editingId ? <Button type="button" variant="ghost" onClick={() => { setEditingId(null); setForm(EMPTY_FORM); }}>Cancel</Button> : null}</div>
               </form>
             </CardContent>
           </Card>
