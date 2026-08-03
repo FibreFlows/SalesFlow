@@ -1,0 +1,279 @@
+"use client";
+
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, CalendarClock, Download, FileJson, List, LogOut, MapPin, Moon, Pencil, Plus, Search, Star, Sun, Trash2, Upload, UserPlus } from "lucide-react";
+import Link from "next/link";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
+import { VoiceEntry, type VoiceFields } from "@/components/voice-entry";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
+
+type LeadStatus = "new" | "contacted" | "qualified" | "unqualified" | "converted";
+type Lead = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  company: string;
+  email: string;
+  phone: string;
+  source: string;
+  status: LeadStatus;
+  estimated_value: number;
+  possible_rgu_sale: number | null;
+  notes: string;
+  ncid: string; ecid: string; ban: string; mobility_ban: string; referrer_ban: string; secondary_phone: string; address: string;
+  preferred_contact_method: string; best_contact_time: string; current_services: string[]; opportunity_scope: string[]; sale_scope: string[];
+  is_with_competitor: boolean; competitor_name: string; is_in_contract: boolean; contract_expiry_date: string | null;
+  current_monthly_cost: number; customer_rating: number | null; installation_completed: boolean | null; last_contacted_at: string | null; next_follow_up_at: string | null; assigned_salesperson: string;
+  created_at: string;
+  updated_at: string;
+  converted_at: string | null;
+  sales_count: number;
+  telus_sims_sold: number;
+  koodo_sims_sold: number;
+  installation_completed_at: string | null;
+};
+
+const STORAGE_KEY = "salesflow.pilot.leads.v1";
+const SERVICES = ["Fibre internet", "Copper internet", "Optik TV", "Home phone", "Security", "Mobility"];
+const EMPTY_FORM = { first_name: "", last_name: "", company: "", email: "", phone: "", secondary_phone: "", ncid: "", ecid: "", ban: "", mobility_ban: "", referrer_ban: "", address: "", preferred_contact_method: "Phone", best_contact_time: "", current_services: [] as string[], opportunity_scope: [] as string[], sale_scope: [] as string[], is_with_competitor: false, competitor_name: "", is_in_contract: false, contract_expiry_date: "", current_monthly_cost: "", customer_rating: "", installation_completed: "", last_contacted_at: "", next_follow_up_at: "", assigned_salesperson: "", source: "", status: "new" as LeadStatus, sale_done_date: "", sales_count: "", telus_sims_sold: "", koodo_sims_sold: "", possible_rgu_sale: "", notes: "" };
+
+function downloadFile(name: string, content: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(value: unknown) {
+  return `"${String(Array.isArray(value) ? value.join(" | ") : value ?? "").replaceAll('"', '""')}"`;
+}
+
+function RatingStars({ value }: { value: number | null }) {
+  return <div className="flex items-center gap-1" aria-label={value ? `${value} out of 5 stars` : "Not rated"}>{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={`size-[18px] ${value && star <= value ? "fill-amber-400 text-amber-400" : "fill-muted text-muted-foreground/30"}`} />)}</div>;
+}
+
+function MobileLeadList({ leads, onEdit, onDelete }: { leads: Lead[]; onEdit: (lead: Lead) => void; onDelete: (lead: Lead) => void }) {
+  return <div className="grid gap-3 md:grid-cols-2 lg:hidden">{leads.map((lead) => <article key={lead.id} className="rounded-[20px] border border-border bg-card p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-base font-semibold">{`${lead.first_name || ""} ${lead.last_name || ""}`.trim() || lead.company || "Unnamed customer"}</p><p className="mt-1 truncate text-xs text-muted-foreground">{lead.phone || lead.email || "No contact details"}</p></div><Badge className="shrink-0 border-primary/20 bg-primary/10 capitalize text-primary">{lead.status}</Badge></div><div className="mt-4 rounded-xl bg-muted/60 p-3"><p className="flex items-start gap-2 text-sm leading-5"><MapPin className="mt-0.5 size-4 shrink-0 text-primary" /><span>{lead.address || "No address added"}</span></p></div><div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3"><div><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">CX rating</p><RatingStars value={lead.customer_rating} /></div><div className="border-l border-border pl-3 text-right"><p className="flex items-center justify-end gap-1 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground"><CalendarClock className="size-3" /> Follow-up</p><p className="mt-1 text-sm font-medium">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleDateString() : "Not set"}</p></div></div>{lead.status === "converted" ? <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs"><p className="font-semibold text-primary">What I sold</p><p className="mt-1 text-muted-foreground">{lead.sale_scope?.join(", ") || "Not recorded"} · {lead.sales_count || 0} sales</p></div> : null}<div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" size="sm" onClick={() => onEdit(lead)}><Pencil /> Edit profile</Button><Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => onDelete(lead)}><Trash2 /> Delete</Button></div></article>)}</div>;
+}
+
+export function PilotClient() {
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [signupProfile, setSignupProfile] = useState({ full_name: "", tech_id: "", afl_email: "", telus_email: "" });
+  const [message, setMessage] = useState("");
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [mobileView, setMobileView] = useState<"add" | "list">("list");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [analyticsNow] = useState(() => Date.now());
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const load = async (activeUser: User | null) => {
+      setUser(activeUser);
+      if (!activeUser) { setReady(true); return; }
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]") as Lead[];
+      if (stored.length) {
+        const { error } = await supabase.from("leads").upsert(stored.map((lead) => ({ ...lead, owner_id: activeUser.id })));
+        if (!error) localStorage.removeItem(STORAGE_KEY);
+      }
+      const { data, error } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
+      if (error) setMessage(error.message); else { const rows = (data || []) as Lead[]; setLeads(rows); const editId = new URLSearchParams(location.search).get("edit"); const target = rows.find((lead) => lead.id === editId); if (target) editLead(target); }
+      setReady(true);
+    };
+    supabase.auth.getUser().then(({ data }) => load(data.user));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => load(session?.user || null));
+    const refresh = () => supabase.auth.getUser().then(({ data: auth }) => load(auth.user));
+    const interval = window.setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => { data.subscription.unsubscribe(); window.clearInterval(interval); window.removeEventListener("focus", refresh); };
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("salesflow.theme") as "light" | "dark" | null;
+    const selected = saved || "dark";
+    document.documentElement.classList.toggle("dark", selected === "dark");
+    const frame = requestAnimationFrame(() => setTheme(selected));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("salesflow.theme", next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+  }
+
+  const filteredLeads = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return leads;
+    return leads.filter((lead) => [lead.first_name, lead.last_name, lead.company, lead.email, lead.phone, lead.secondary_phone, lead.ncid, lead.ecid, lead.ban, lead.mobility_ban, lead.referrer_ban, lead.competitor_name, lead.assigned_salesperson].some((value) => (value || "").toLowerCase().includes(needle)));
+  }, [leads, query]);
+
+  const analytics = useMemo(() => {
+    const now = analyticsNow;
+    const sixtyDays = now + 60 * 86400000;
+    return {
+      pipeline: leads.filter((lead) => lead.status !== "converted" && lead.status !== "unqualified").reduce((sum, lead) => sum + Number(lead.possible_rgu_sale || 0), 0),
+      followUps: leads.filter((lead) => lead.next_follow_up_at && new Date(lead.next_follow_up_at).getTime() <= now).length,
+      contracts: leads.filter((lead) => lead.contract_expiry_date && new Date(lead.contract_expiry_date).getTime() >= now && new Date(lead.contract_expiry_date).getTime() <= sixtyDays).length,
+      fibre: leads.filter((lead) => lead.current_services?.includes("Copper internet") && !lead.current_services?.includes("Fibre internet")).length,
+    };
+  }, [analyticsNow, leads]);
+
+  function toggleService(field: "current_services" | "opportunity_scope" | "sale_scope", service: string) {
+    setForm((current) => ({ ...current, [field]: current[field].includes(service) ? current[field].filter((item) => item !== service) : [...current[field], service] }));
+  }
+
+  function applyVoiceDraft(fields: VoiceFields) {
+    setForm((current) => ({ ...current, first_name: fields.first_name || current.first_name, last_name: fields.last_name || current.last_name, email: fields.email || current.email, phone: fields.phone || current.phone, secondary_phone: fields.secondary_phone || current.secondary_phone, address: fields.address || current.address, ncid: fields.ncid || current.ncid, ecid: fields.ecid || current.ecid, ban: fields.ban || current.ban, mobility_ban: fields.mobility_ban || current.mobility_ban, referrer_ban: fields.referrer_ban || current.referrer_ban, competitor_name: fields.competitor_name || current.competitor_name, is_with_competitor: fields.is_with_competitor || current.is_with_competitor, customer_rating: fields.customer_rating || current.customer_rating, current_services: fields.current_services?.length ? fields.current_services : current.current_services, sale_scope: fields.sale_scope?.length ? fields.sale_scope : current.sale_scope, status: fields.status || current.status, sales_count: fields.sales_count || current.sales_count, telus_sims_sold: fields.telus_sims_sold || current.telus_sims_sold, koodo_sims_sold: fields.koodo_sims_sold || current.koodo_sims_sold, notes: fields.notes || current.notes }));
+  }
+
+  async function submitLead(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setMessage("");
+    const now = new Date().toISOString();
+    const { sale_done_date, ...leadForm } = form;
+    const calculatedSalesCount = Number(form.sales_count || 0) || (Number(form.telus_sims_sold || 0) + Number(form.koodo_sims_sold || 0) + form.sale_scope.filter((service) => service !== "Mobility").length);
+    const convertedAt = form.status === "converted" ? (sale_done_date ? new Date(`${sale_done_date}T12:00:00`).toISOString() : now) : null;
+    if (editingId) {
+      const previous = leads.find((lead) => lead.id === editingId);
+      const installationCompleted = form.installation_completed === "" ? null : form.installation_completed === "yes";
+      const updated = { ...leadForm, sales_count: calculatedSalesCount, telus_sims_sold: Number(form.telus_sims_sold || 0), koodo_sims_sold: Number(form.koodo_sims_sold || 0), possible_rgu_sale: Number(form.possible_rgu_sale || 0) || null, current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: installationCompleted, converted_at: convertedAt || previous?.converted_at || null, installation_completed_at: installationCompleted ? previous?.installation_completed_at || now : null, contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, updated_at: now };
+      const { error } = await createClient().from("leads").update(updated).eq("id", editingId);
+      if (error) { setMessage(`Could not save: ${error.message}`); setSaving(false); return; }
+      setLeads((current) => current.map((lead) => lead.id === editingId ? { ...lead, ...updated } : lead));
+    } else {
+      if (!user) { setMessage("Your session expired. Please sign in again."); setSaving(false); return; }
+      const installationCompleted = form.installation_completed === "" ? null : form.installation_completed === "yes";
+      const lead = { id: crypto.randomUUID(), owner_id: user.id, ...leadForm, estimated_value: 0, sales_count: calculatedSalesCount, telus_sims_sold: Number(form.telus_sims_sold || 0), koodo_sims_sold: Number(form.koodo_sims_sold || 0), possible_rgu_sale: Number(form.possible_rgu_sale || 0) || null, current_monthly_cost: Number(form.current_monthly_cost || 0), customer_rating: Number(form.customer_rating || 0) || null, installation_completed: installationCompleted, converted_at: convertedAt, installation_completed_at: installationCompleted ? now : null, contract_expiry_date: form.contract_expiry_date || null, last_contacted_at: form.last_contacted_at || null, next_follow_up_at: form.next_follow_up_at || null, created_at: now, updated_at: now };
+      const { error } = await createClient().from("leads").insert(lead);
+      if (error) { setMessage(`Could not save: ${error.message}`); setSaving(false); return; }
+      setLeads((current) => [lead, ...current]);
+    }
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setMessage("Lead saved to the cloud.");
+    setSaving(false);
+  }
+
+  async function authenticate(mode: "signin" | "signup") {
+    const supabase = createClient();
+    const result = mode === "signin" ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/pilot`, data: signupProfile } });
+    setPassword("");
+    if (!result.error && result.data.user && result.data.session && mode === "signup") await supabase.from("user_profiles").upsert({ user_id: result.data.user.id, ...signupProfile, updated_at: new Date().toISOString() });
+    if (result.error) setMessage(result.error.message); else if (mode === "signup" && !result.data.session) setMessage("Check your email to confirm the account, then sign in.");
+  }
+
+  function editLead(lead: Lead) {
+    setEditingId(lead.id);
+    setForm({ ...EMPTY_FORM, ...lead, sale_done_date: lead.converted_at?.slice(0, 10) || "", sales_count: String(lead.sales_count || ""), telus_sims_sold: String(lead.telus_sims_sold || ""), koodo_sims_sold: String(lead.koodo_sims_sold || ""), installation_completed: lead.installation_completed === null ? "" : lead.installation_completed ? "yes" : "no", contract_expiry_date: lead.contract_expiry_date?.slice(0, 10) || "", last_contacted_at: lead.last_contacted_at?.slice(0, 10) || "", next_follow_up_at: lead.next_follow_up_at?.slice(0, 10) || "", possible_rgu_sale: String(lead.possible_rgu_sale || ""), current_monthly_cost: String(lead.current_monthly_cost || ""), customer_rating: String(lead.customer_rating || "") });
+    setMobileView("add");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function exportJson() {
+    downloadFile(`salesflow-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ format: "salesflow-leads", version: 1, exported_at: new Date().toISOString(), leads }, null, 2), "application/json");
+  }
+
+  function exportCsv() {
+    const fields: (keyof Lead)[] = ["id", "first_name", "last_name", "company", "ncid", "ecid", "ban", "mobility_ban", "referrer_ban", "email", "phone", "secondary_phone", "address", "preferred_contact_method", "best_contact_time", "current_services", "opportunity_scope", "sale_scope", "is_with_competitor", "competitor_name", "is_in_contract", "contract_expiry_date", "current_monthly_cost", "customer_rating", "installation_completed", "source", "status", "possible_rgu_sale", "last_contacted_at", "next_follow_up_at", "assigned_salesperson", "notes", "created_at", "updated_at"];
+    const rows = [fields.join(","), ...leads.map((lead) => fields.map((field) => csvCell(lead[field])).join(","))];
+    downloadFile(`salesflow-leads-${new Date().toISOString().slice(0, 10)}.csv`, rows.join("\r\n"), "text/csv;charset=utf-8");
+  }
+
+  async function importJson(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const payload = JSON.parse(await file.text()) as { format?: string; version?: number; leads?: Lead[] };
+    if (payload.format !== "salesflow-leads" || payload.version !== 1 || !Array.isArray(payload.leads)) throw new Error("This is not a valid SalesFlow backup.");
+    if (!user) return;
+    const imported = payload.leads.map((lead) => ({ ...lead, owner_id: user.id }));
+    const { error } = await createClient().from("leads").upsert(imported);
+    if (error) { setMessage(error.message); return; }
+    setLeads(payload.leads);
+    setMessage(`${payload.leads.length} records restored to the cloud.`);
+    event.target.value = "";
+  }
+
+  async function deleteLead(lead: Lead) {
+    if (!window.confirm(`Delete ${lead.first_name} ${lead.last_name}?`)) return;
+    const { error } = await createClient().from("leads").delete().eq("id", lead.id);
+    if (error) { setMessage(error.message); return; }
+    setLeads((current) => current.filter((item) => item.id !== lead.id));
+  }
+
+  if (ready && !user) return <main className="grid min-h-screen place-items-center bg-background p-5 text-foreground"><Card className="w-full max-w-md"><CardHeader><Badge className="w-fit border-primary/30 bg-primary/10 text-primary">CLOUD DATABASE</Badge><CardTitle className="pt-3 text-2xl">Sign in to SalesFlow</CardTitle></CardHeader><CardContent className="space-y-3"><Input type="email" autoComplete="username" inputMode="email" placeholder="Login email" value={email} onChange={(e) => setEmail(e.target.value)} /><Input type="password" autoComplete={authMode === "signin" ? "current-password" : "new-password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />{authMode === "signup" ? <div className="rounded-md border border-border p-3"><p className="mb-2 text-xs font-medium text-muted-foreground">Account details used on reports</p><div className="space-y-2"><Input placeholder="Full name" value={signupProfile.full_name} onChange={(e) => setSignupProfile({ ...signupProfile, full_name: e.target.value })} /><Input placeholder="Tech ID" value={signupProfile.tech_id} onChange={(e) => setSignupProfile({ ...signupProfile, tech_id: e.target.value })} /><Input type="email" placeholder="AFL email" value={signupProfile.afl_email} onChange={(e) => setSignupProfile({ ...signupProfile, afl_email: e.target.value })} /><Input type="email" placeholder="TELUS email" value={signupProfile.telus_email} onChange={(e) => setSignupProfile({ ...signupProfile, telus_email: e.target.value })} /></div></div> : null}{message ? <p className="text-sm text-primary">{message}</p> : null}<Button className="w-full" onClick={() => authenticate(authMode)}>{authMode === "signin" ? "Sign in securely" : "Create secure account"}</Button><Button className="w-full" variant="ghost" onClick={() => { setAuthMode(authMode === "signin" ? "signup" : "signin"); setPassword(""); setMessage(""); }}>{authMode === "signin" ? "Create a new account" : "I already have an account"}</Button><p className="text-center text-[11px] leading-4 text-muted-foreground">Your password is sent only to Supabase over HTTPS and is never stored in SalesFlow or included in reports.</p></CardContent></Card></main>;
+
+  return (
+    <main className="min-h-screen bg-background p-5 text-foreground sm:p-8">
+      <div className="mx-auto max-w-7xl">
+        <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Dashboard</Link>
+        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div><Badge className="border-primary/30 bg-primary/10 text-primary">CLOUD SALES TRACKER v0.4</Badge><h1 className="mt-3 text-3xl font-semibold tracking-tight">Telecom lead workspace</h1><p className="mt-2 text-sm text-muted-foreground">Your records are securely saved to your Supabase cloud account.</p></div>
+          <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={toggleTheme}>{theme === "dark" ? <Sun /> : <Moon />} {theme === "dark" ? "Light" : "Dark"}</Button><Button variant="outline" onClick={exportCsv}><Download /> CSV</Button><Button variant="outline" onClick={exportJson}><FileJson /> Backup</Button><Button variant="outline" onClick={() => fileRef.current?.click()}><Upload /> Restore</Button><Button variant="ghost" onClick={() => createClient().auth.signOut()}><LogOut /> Sign out</Button><input ref={fileRef} className="hidden" type="file" accept="application/json" onChange={importJson} /></div>
+        </div>
+
+        <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[["Possible RGU / Sale", analytics.pipeline], ['Follow-ups due', analytics.followUps], ['Contracts expiring (60d)', analytics.contracts], ['Copper → Fibre', analytics.fibre]].map(([label, value]) => <Card key={label}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold">{value}</p></CardContent></Card>)}
+        </div>
+
+        <div className="mb-5 grid grid-cols-2 rounded-2xl border border-border bg-muted/60 p-1 xl:hidden"><button onClick={() => setMobileView("add")} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${mobileView === "add" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}><UserPlus className="size-4" /> Add lead</button><button onClick={() => setMobileView("list")} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${mobileView === "list" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}><List className="size-4" /> Lead list</button></div>
+
+        <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+          <Card className={`${mobileView === "add" ? "block" : "hidden"} rounded-[22px] xl:block`}>
+            <CardHeader><CardTitle>{editingId ? "Edit lead" : "Add a lead"}</CardTitle></CardHeader>
+            <CardContent>
+              <form className="space-y-3" onSubmit={submitLead}><VoiceEntry onApply={applyVoiceDraft} />
+                <p className="text-xs text-muted-foreground">All fields are optional for now. Add only the information you have.</p>
+                <div className="grid grid-cols-2 gap-3"><Input aria-label="First name" placeholder="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} /><Input aria-label="Last name" placeholder="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} /></div>
+                <Input aria-label="Company" placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+                <div className="grid grid-cols-2 gap-3"><Input aria-label="NCID" placeholder="NCID" value={form.ncid} onChange={(e) => setForm({ ...form, ncid: e.target.value })} /><Input aria-label="ECID" placeholder="ECID" value={form.ecid} onChange={(e) => setForm({ ...form, ecid: e.target.value })} /><Input aria-label="HS BAN" placeholder="HS BAN" value={form.ban} onChange={(e) => setForm({ ...form, ban: e.target.value })} /><Input aria-label="Mob BAN" placeholder="Mob BAN" value={form.mobility_ban} onChange={(e) => setForm({ ...form, mobility_ban: e.target.value })} /></div>
+                <Input aria-label="Referrer BAN" placeholder="Referrer BAN" value={form.referrer_ban} onChange={(e) => setForm({ ...form, referrer_ban: e.target.value })} />
+                <Input type="email" aria-label="Email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <div className="grid grid-cols-2 gap-3"><Input aria-label="Phone" placeholder="Primary phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /><Input aria-label="Secondary phone" placeholder="Secondary phone" value={form.secondary_phone} onChange={(e) => setForm({ ...form, secondary_phone: e.target.value })} /></div>
+                <AddressAutocomplete value={form.address} onChange={(address) => setForm((current) => ({ ...current, address }))} />
+                <div className="grid grid-cols-2 gap-3"><select aria-label="Preferred contact" className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={form.preferred_contact_method} onChange={(e) => setForm({ ...form, preferred_contact_method: e.target.value })}><option>Phone</option><option>Text</option><option>Email</option><option>In person</option></select><Input aria-label="Best contact time" placeholder="Best time to contact" value={form.best_contact_time} onChange={(e) => setForm({ ...form, best_contact_time: e.target.value })} /></div>
+                {([['current_services', 'Customer has', 'bg-sky-50/60 dark:bg-sky-950/20'], ['opportunity_scope', 'Scope of sale', 'bg-amber-50/70 dark:bg-amber-950/20'], ['sale_scope', 'What I sold', 'bg-emerald-50/70 dark:bg-emerald-950/20']] as const).map(([field, label, tone]) => <fieldset key={field} className={`rounded-xl border border-input p-3 ${tone}`}><legend className="px-1 text-xs font-medium">{label}</legend><div className="grid grid-cols-2 gap-2">{SERVICES.map((service) => <label key={service} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form[field].includes(service)} onChange={() => toggleService(field, service)} />{service}</label>)}</div></fieldset>)}{form.sale_scope.includes("Mobility") ? <div className="grid grid-cols-2 gap-3 rounded-md border border-primary/20 p-3"><label className="text-xs text-muted-foreground">TELUS SIMs sold<Input className="mt-1" type="number" min="0" step="1" value={form.telus_sims_sold} onChange={(e) => setForm({ ...form, telus_sims_sold: e.target.value })} /></label><label className="text-xs text-muted-foreground">Koodo SIMs sold<Input className="mt-1" type="number" min="0" step="1" value={form.koodo_sims_sold} onChange={(e) => setForm({ ...form, koodo_sims_sold: e.target.value })} /></label></div> : null}
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_with_competitor} onChange={(e) => setForm({ ...form, is_with_competitor: e.target.checked })} /> Currently with a competitor</label>
+                {form.is_with_competitor ? <Input aria-label="Competitor" placeholder="Competitor name" value={form.competitor_name} onChange={(e) => setForm({ ...form, competitor_name: e.target.value })} /> : null}
+                <div className="grid grid-cols-2 gap-3"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_in_contract} onChange={(e) => setForm({ ...form, is_in_contract: e.target.checked })} /> In contract</label><Input type="date" min="2000-01-01" max="2100-12-31" aria-label="Contract expiry" value={form.contract_expiry_date} onChange={(e) => setForm({ ...form, contract_expiry_date: e.target.value })} /></div>
+                <div className="grid grid-cols-2 gap-3"><Input type="number" min="0" step="0.01" aria-label="Customer current monthly bill" placeholder="Current monthly bill ($)" title="What the customer currently pays each month" value={form.current_monthly_cost} onChange={(e) => setForm({ ...form, current_monthly_cost: e.target.value })} /><select aria-label="Customer rating" className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={form.customer_rating} onChange={(e) => setForm({ ...form, customer_rating: e.target.value })}><option value="">Customer rating</option>{[1,2,3,4,5].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select></div>
+                <label className="block text-xs text-muted-foreground">Installation done by me?<select aria-label="Installation done by me" className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground" value={form.installation_completed} onChange={(e) => setForm({ ...form, installation_completed: e.target.value })}><option value="">Not specified</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+                <div className="grid grid-cols-2 gap-3"><Input aria-label="Lead source" placeholder="Lead source (referral, door knock...)" title="Where this lead came from" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} /><Input type="number" min="0" step="1" aria-label="Possible RGU per sale" placeholder="Possible RGU / Sale" title="Number of possible revenue-generating units in this sale" value={form.possible_rgu_sale} onChange={(e) => setForm({ ...form, possible_rgu_sale: e.target.value })} /></div>
+                <label className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm font-medium"><input type="checkbox" checked={form.status === "converted"} onChange={(e) => setForm({ ...form, status: e.target.checked ? "converted" : "qualified" })} /> Sale done by me</label><select aria-label="Lead status" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })}><option value="new">New</option><option value="contacted">Contacted</option><option value="qualified">Qualified</option><option value="unqualified">Unqualified</option><option value="converted">Converted</option></select>{form.status === "converted" ? <div className="grid grid-cols-2 gap-3"><label className="block text-xs text-muted-foreground">Sale done date<Input className="mt-1" type="date" value={form.sale_done_date} onChange={(e) => setForm({ ...form, sale_done_date: e.target.value })} /></label><label className="block text-xs text-muted-foreground">Number of sales done<Input className="mt-1" type="number" min="0" step="1" placeholder="Example: 7" value={form.sales_count} onChange={(e) => setForm({ ...form, sales_count: e.target.value })} /></label></div> : null}
+                <div className="grid grid-cols-2 gap-3"><label className="text-xs text-muted-foreground">Last contacted date (optional)<Input className="mt-1" type="date" min="2000-01-01" max="2100-12-31" value={form.last_contacted_at} onChange={(e) => setForm({ ...form, last_contacted_at: e.target.value })} /></label><label className="text-xs text-muted-foreground">Next follow-up date (optional)<Input className="mt-1" type="date" min="2000-01-01" max="2100-12-31" value={form.next_follow_up_at} onChange={(e) => setForm({ ...form, next_follow_up_at: e.target.value })} /></label></div>
+                <Input aria-label="Assigned salesperson" placeholder="Assigned salesperson" value={form.assigned_salesperson} onChange={(e) => setForm({ ...form, assigned_salesperson: e.target.value })} />
+                <textarea aria-label="Notes" className="min-h-24 w-full rounded-md border border-input bg-transparent p-3 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                {message ? <p role="status" className={`rounded-md p-3 text-sm ${message.startsWith("Could not") ? "bg-red-50 text-red-700" : "bg-primary/10 text-primary"}`}>{message}</p> : null}
+                <div className="flex gap-2"><Button className="flex-1" type="submit" disabled={saving}><Plus /> {saving ? "Saving..." : editingId ? "Save changes" : "Add lead"}</Button>{editingId ? <Button type="button" variant="ghost" onClick={() => { setEditingId(null); setForm(EMPTY_FORM); }}>Cancel</Button> : null}</div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card className={`${mobileView === "list" ? "block" : "hidden"} rounded-[22px] xl:block`}>
+            <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Leads</CardTitle><p className="mt-1 text-sm text-muted-foreground">{leads.length} saved record{leads.length === 1 ? "" : "s"}</p></div><div className="relative sm:w-72"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Search leads..." value={query} onChange={(e) => setQuery(e.target.value)} /></div></CardHeader>
+            <CardContent>
+              {!ready ? <p className="py-12 text-center text-sm text-muted-foreground">Loading your records...</p> : filteredLeads.length === 0 ? <div className="py-14 text-center"><p className="font-medium">No leads found</p><p className="mt-2 text-sm text-muted-foreground">Add your first lead using the form.</p></div> : <><MobileLeadList leads={filteredLeads} onEdit={editLead} onDelete={deleteLead} /><div className="hidden overflow-x-auto lg:block"><table className="min-w-[900px] w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="pb-3 pr-6 font-medium">Lead</th><th className="pb-3 pr-6 font-medium">Address</th><th className="pb-3 font-medium">Follow-up</th><th className="pb-3 font-medium">Status</th><th className="pb-3 font-medium">CX rating</th><th className="pb-3 text-right font-medium">Actions</th></tr></thead><tbody>{filteredLeads.map((lead) => <tr key={lead.id} className="border-b border-border/60 last:border-0"><td className="min-w-52 py-4 pr-6"><p className="font-medium">{lead.first_name} {lead.last_name}</p><p className="mt-1 break-words text-xs text-muted-foreground">{lead.company || lead.email || lead.phone || "No company or contact"}</p></td><td className="min-w-64 whitespace-normal py-4 pr-6 text-xs text-muted-foreground"><p>{lead.address || 'No address'}</p></td><td className="py-4 text-xs">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleDateString() : 'Not set'}</td><td className="py-4"><Badge className="border-primary/20 bg-primary/10 capitalize text-primary">{lead.status}</Badge>{lead.status === "converted" ? <p className="mt-1 text-xs text-muted-foreground">{lead.converted_at?.slice(0, 10) || "Date not set"} · {lead.sales_count || 0} sales<br/>{lead.sale_scope?.join(", ") || "What sold not set"}</p> : null}</td><td className="py-4"><RatingStars value={lead.customer_rating} /></td><td className="py-4"><div className="flex justify-end gap-1"><Button aria-label={`Edit ${lead.first_name}`} variant="ghost" size="icon" onClick={() => editLead(lead)}><Pencil /></Button><Button aria-label={`Delete ${lead.first_name}`} variant="ghost" size="icon" onClick={() => deleteLead(lead)}><Trash2 /></Button></div></td></tr>)}</tbody></table></div></>}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </main>
+  );
+}
