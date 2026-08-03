@@ -24,7 +24,7 @@ type Lead = {
   estimated_value: number;
   possible_rgu_sale: number | null;
   notes: string;
-  ncid: string; ecid: string; ban: string; mobility_ban: string; secondary_phone: string; address: string;
+  ncid: string; ecid: string; ban: string; mobility_ban: string; referrer_ban: string; secondary_phone: string; address: string;
   preferred_contact_method: string; best_contact_time: string; current_services: string[]; sale_scope: string[];
   is_with_competitor: boolean; competitor_name: string; is_in_contract: boolean; contract_expiry_date: string | null;
   current_monthly_cost: number; customer_rating: number | null; installation_completed: boolean | null; last_contacted_at: string | null; next_follow_up_at: string | null; assigned_salesperson: string;
@@ -36,7 +36,7 @@ type Lead = {
 
 const STORAGE_KEY = "salesflow.pilot.leads.v1";
 const SERVICES = ["Fibre internet", "Copper internet", "Optik TV", "Home phone", "Security", "Mobility"];
-const EMPTY_FORM = { first_name: "", last_name: "", company: "", email: "", phone: "", secondary_phone: "", ncid: "", ecid: "", ban: "", mobility_ban: "", address: "", preferred_contact_method: "Phone", best_contact_time: "", current_services: [] as string[], sale_scope: [] as string[], is_with_competitor: false, competitor_name: "", is_in_contract: false, contract_expiry_date: "", current_monthly_cost: "", customer_rating: "", installation_completed: "", last_contacted_at: "", next_follow_up_at: "", assigned_salesperson: "", source: "", status: "new" as LeadStatus, possible_rgu_sale: "", notes: "" };
+const EMPTY_FORM = { first_name: "", last_name: "", company: "", email: "", phone: "", secondary_phone: "", ncid: "", ecid: "", ban: "", mobility_ban: "", referrer_ban: "", address: "", preferred_contact_method: "Phone", best_contact_time: "", current_services: [] as string[], sale_scope: [] as string[], is_with_competitor: false, competitor_name: "", is_in_contract: false, contract_expiry_date: "", current_monthly_cost: "", customer_rating: "", installation_completed: "", last_contacted_at: "", next_follow_up_at: "", assigned_salesperson: "", source: "", status: "new" as LeadStatus, possible_rgu_sale: "", notes: "" };
 
 function downloadFile(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -103,7 +103,7 @@ export function PilotClient() {
   const filteredLeads = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return leads;
-    return leads.filter((lead) => [lead.first_name, lead.last_name, lead.company, lead.email, lead.phone, lead.secondary_phone, lead.ncid, lead.ecid, lead.ban, lead.mobility_ban, lead.competitor_name, lead.assigned_salesperson].some((value) => (value || "").toLowerCase().includes(needle)));
+    return leads.filter((lead) => [lead.first_name, lead.last_name, lead.company, lead.email, lead.phone, lead.secondary_phone, lead.ncid, lead.ecid, lead.ban, lead.mobility_ban, lead.referrer_ban, lead.competitor_name, lead.assigned_salesperson].some((value) => (value || "").toLowerCase().includes(needle)));
   }, [leads, query]);
 
   const analytics = useMemo(() => {
@@ -164,7 +164,7 @@ export function PilotClient() {
   }
 
   function exportCsv() {
-    const fields: (keyof Lead)[] = ["id", "first_name", "last_name", "company", "ncid", "ecid", "ban", "mobility_ban", "email", "phone", "secondary_phone", "address", "preferred_contact_method", "best_contact_time", "current_services", "sale_scope", "is_with_competitor", "competitor_name", "is_in_contract", "contract_expiry_date", "current_monthly_cost", "customer_rating", "installation_completed", "source", "status", "possible_rgu_sale", "last_contacted_at", "next_follow_up_at", "assigned_salesperson", "notes", "created_at", "updated_at"];
+    const fields: (keyof Lead)[] = ["id", "first_name", "last_name", "company", "ncid", "ecid", "ban", "mobility_ban", "referrer_ban", "email", "phone", "secondary_phone", "address", "preferred_contact_method", "best_contact_time", "current_services", "sale_scope", "is_with_competitor", "competitor_name", "is_in_contract", "contract_expiry_date", "current_monthly_cost", "customer_rating", "installation_completed", "source", "status", "possible_rgu_sale", "last_contacted_at", "next_follow_up_at", "assigned_salesperson", "notes", "created_at", "updated_at"];
     const rows = [fields.join(","), ...leads.map((lead) => fields.map((field) => csvCell(lead[field])).join(","))];
     downloadFile(`salesflow-leads-${new Date().toISOString().slice(0, 10)}.csv`, rows.join("\r\n"), "text/csv;charset=utf-8");
   }
@@ -214,6 +214,7 @@ export function PilotClient() {
                 <div className="grid grid-cols-2 gap-3"><Input aria-label="First name" placeholder="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} /><Input aria-label="Last name" placeholder="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} /></div>
                 <Input aria-label="Company" placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
                 <div className="grid grid-cols-2 gap-3"><Input aria-label="NCID" placeholder="NCID" value={form.ncid} onChange={(e) => setForm({ ...form, ncid: e.target.value })} /><Input aria-label="ECID" placeholder="ECID" value={form.ecid} onChange={(e) => setForm({ ...form, ecid: e.target.value })} /><Input aria-label="HS BAN" placeholder="HS BAN" value={form.ban} onChange={(e) => setForm({ ...form, ban: e.target.value })} /><Input aria-label="Mob BAN" placeholder="Mob BAN" value={form.mobility_ban} onChange={(e) => setForm({ ...form, mobility_ban: e.target.value })} /></div>
+                <Input aria-label="Referrer BAN" placeholder="Referrer BAN" value={form.referrer_ban} onChange={(e) => setForm({ ...form, referrer_ban: e.target.value })} />
                 <Input type="email" aria-label="Email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 <div className="grid grid-cols-2 gap-3"><Input aria-label="Phone" placeholder="Primary phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /><Input aria-label="Secondary phone" placeholder="Secondary phone" value={form.secondary_phone} onChange={(e) => setForm({ ...form, secondary_phone: e.target.value })} /></div>
                 <AddressAutocomplete value={form.address} onChange={(address) => setForm((current) => ({ ...current, address }))} />
