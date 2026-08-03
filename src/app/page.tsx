@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LocalDateTime } from "@/components/local-date-time";
 import { DashboardMetrics } from "@/components/dashboard-metrics";
@@ -35,12 +34,6 @@ const nav = [
   [CalendarDays, "Workload", false, "/jobs"],
   [FileText, "Reports", false, "/reports"],
 ] as const;
-
-const activity = [
-  { initials: "MC", title: "Proposal opened", body: "Northstar Logistics reviewed the Fibre 3G proposal.", time: "12 min" },
-  { initials: "EB", title: "Call completed", body: "Discovery call notes added to Cedar & Stone Group.", time: "1 hr" },
-  { initials: "SP", title: "Lead qualified", body: "Peakline Dental moved into the active pipeline.", time: "3 hr" },
-];
 
 export default function Home() {
   return (
@@ -109,26 +102,8 @@ export default function Home() {
           <DashboardMetrics />
           <ProductSalesTracker />
 
-          <section className="mt-6 grid gap-6 xl:grid-cols-[1.65fr_1fr]">
+          <section className="mt-6">
             <ActiveOpportunities />
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent activity</CardTitle>
-                <p className="text-sm text-muted-foreground">Live updates from your team.</p>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {activity.map((item) => (
-                  <div className="flex gap-3" key={item.title}>
-                    <div className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-xs font-medium">{item.initials}</div>
-                    <div className="min-w-0">
-                      <div className="flex items-baseline justify-between gap-3"><p className="text-sm font-medium">{item.title}</p><span className="text-[11px] text-muted-foreground">{item.time}</span></div>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.body}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
           </section>
         </div>
       </main>

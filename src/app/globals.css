@@ -102,9 +102,9 @@ html[data-design="theme-3"] .mobile-command-card .bg-primary\/10 { background-co
   body { -webkit-tap-highlight-color: transparent; }
   main > header { height: 3.75rem; padding-inline: 1rem; }
   .dashboard-metrics + * { margin-top: 1.25rem; }
-  .dashboard-metrics { grid-template-columns: repeat(4, minmax(7.25rem, 1fr)); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: .25rem; scrollbar-width: none; }
-  .dashboard-metrics::-webkit-scrollbar { display: none; }
-  .dashboard-metrics > * { scroll-snap-align: start; }
+  .metric-strip { scrollbar-width: none; scroll-snap-type: x mandatory; }
+  .metric-strip::-webkit-scrollbar { display: none; }
+  .metric-strip > * { scroll-snap-align: start; }
   .product-strip { scrollbar-width: none; scroll-snap-type: x mandatory; }
   .product-strip::-webkit-scrollbar { display: none; }
   .product-strip > * { scroll-snap-align: start; }
