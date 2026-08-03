@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Download, FileJson, LogOut, Moon, Pencil, Plus, Search, Sun, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, CalendarClock, Download, FileJson, List, LogOut, MapPin, Moon, Pencil, Plus, Search, Star, Sun, Trash2, Upload, UserPlus } from "lucide-react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -55,6 +55,14 @@ function csvCell(value: unknown) {
   return `"${String(Array.isArray(value) ? value.join(" | ") : value ?? "").replaceAll('"', '""')}"`;
 }
 
+function RatingStars({ value }: { value: number | null }) {
+  return <div className="flex items-center gap-1" aria-label={value ? `${value} out of 5 stars` : "Not rated"}>{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={`size-[18px] ${value && star <= value ? "fill-amber-400 text-amber-400" : "fill-muted text-muted-foreground/30"}`} />)}</div>;
+}
+
+function MobileLeadList({ leads, onEdit, onDelete }: { leads: Lead[]; onEdit: (lead: Lead) => void; onDelete: (lead: Lead) => void }) {
+  return <div className="space-y-3 md:hidden">{leads.map((lead) => <article key={lead.id} className="rounded-[20px] border border-border bg-card p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-base font-semibold">{`${lead.first_name || ""} ${lead.last_name || ""}`.trim() || lead.company || "Unnamed customer"}</p><p className="mt-1 truncate text-xs text-muted-foreground">{lead.phone || lead.email || "No contact details"}</p></div><Badge className="shrink-0 border-primary/20 bg-primary/10 capitalize text-primary">{lead.status}</Badge></div><div className="mt-4 rounded-xl bg-muted/60 p-3"><p className="flex items-start gap-2 text-sm leading-5"><MapPin className="mt-0.5 size-4 shrink-0 text-primary" /><span>{lead.address || "No address added"}</span></p></div><div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3"><div><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">CX rating</p><RatingStars value={lead.customer_rating} /></div><div className="border-l border-border pl-3 text-right"><p className="flex items-center justify-end gap-1 text-[10px] font-semibold uppercase tracking-[.1em] text-muted-foreground"><CalendarClock className="size-3" /> Follow-up</p><p className="mt-1 text-sm font-medium">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleDateString() : "Not set"}</p></div></div>{lead.status === "converted" ? <div className="mt-3 rounded-xl border border-primary/15 bg-primary/5 p-3 text-xs"><p className="font-semibold text-primary">What I sold</p><p className="mt-1 text-muted-foreground">{lead.sale_scope?.join(", ") || "Not recorded"} · {lead.sales_count || 0} sales</p></div> : null}<div className="mt-4 grid grid-cols-2 gap-2"><Button variant="outline" size="sm" onClick={() => onEdit(lead)}><Pencil /> Edit profile</Button><Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => onDelete(lead)}><Trash2 /> Delete</Button></div></article>)}</div>;
+}
+
 export function PilotClient() {
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
@@ -68,6 +76,7 @@ export function PilotClient() {
   const [query, setQuery] = useState("");
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mobileView, setMobileView] = useState<"add" | "list">("list");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [analyticsNow] = useState(() => Date.now());
   const fileRef = useRef<HTMLInputElement>(null);
@@ -83,7 +92,7 @@ export function PilotClient() {
         if (!error) localStorage.removeItem(STORAGE_KEY);
       }
       const { data, error } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
-      if (error) setMessage(error.message); else setLeads((data || []) as Lead[]);
+      if (error) setMessage(error.message); else { const rows = (data || []) as Lead[]; setLeads(rows); const editId = new URLSearchParams(location.search).get("edit"); const target = rows.find((lead) => lead.id === editId); if (target) editLead(target); }
       setReady(true);
     };
     supabase.auth.getUser().then(({ data }) => load(data.user));
@@ -174,6 +183,7 @@ export function PilotClient() {
   function editLead(lead: Lead) {
     setEditingId(lead.id);
     setForm({ ...EMPTY_FORM, ...lead, sale_done_date: lead.converted_at?.slice(0, 10) || "", sales_count: String(lead.sales_count || ""), telus_sims_sold: String(lead.telus_sims_sold || ""), koodo_sims_sold: String(lead.koodo_sims_sold || ""), installation_completed: lead.installation_completed === null ? "" : lead.installation_completed ? "yes" : "no", contract_expiry_date: lead.contract_expiry_date?.slice(0, 10) || "", last_contacted_at: lead.last_contacted_at?.slice(0, 10) || "", next_follow_up_at: lead.next_follow_up_at?.slice(0, 10) || "", possible_rgu_sale: String(lead.possible_rgu_sale || ""), current_monthly_cost: String(lead.current_monthly_cost || ""), customer_rating: String(lead.customer_rating || "") });
+    setMobileView("add");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -223,8 +233,10 @@ export function PilotClient() {
           {[["Possible RGU / Sale", analytics.pipeline], ['Follow-ups due', analytics.followUps], ['Contracts expiring (60d)', analytics.contracts], ['Copper → Fibre', analytics.fibre]].map(([label, value]) => <Card key={label}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold">{value}</p></CardContent></Card>)}
         </div>
 
+        <div className="mb-5 grid grid-cols-2 rounded-2xl border border-border bg-muted/60 p-1 xl:hidden"><button onClick={() => setMobileView("add")} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${mobileView === "add" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}><UserPlus className="size-4" /> Add lead</button><button onClick={() => setMobileView("list")} className={`flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition ${mobileView === "list" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}><List className="size-4" /> Lead list</button></div>
+
         <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-          <Card>
+          <Card className={`${mobileView === "add" ? "block" : "hidden"} rounded-[22px] xl:block`}>
             <CardHeader><CardTitle>{editingId ? "Edit lead" : "Add a lead"}</CardTitle></CardHeader>
             <CardContent>
               <form className="space-y-3" onSubmit={submitLead}><VoiceEntry onApply={applyVoiceDraft} />
@@ -254,10 +266,10 @@ export function PilotClient() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={`${mobileView === "list" ? "block" : "hidden"} rounded-[22px] xl:block`}>
             <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Leads</CardTitle><p className="mt-1 text-sm text-muted-foreground">{leads.length} saved record{leads.length === 1 ? "" : "s"}</p></div><div className="relative sm:w-72"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Search leads..." value={query} onChange={(e) => setQuery(e.target.value)} /></div></CardHeader>
             <CardContent>
-              {!ready ? <p className="py-12 text-center text-sm text-muted-foreground">Loading your records...</p> : filteredLeads.length === 0 ? <div className="py-14 text-center"><p className="font-medium">No leads found</p><p className="mt-2 text-sm text-muted-foreground">Add your first lead using the form.</p></div> : <div className="overflow-x-auto"><table className="min-w-[900px] w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="pb-3 pr-6 font-medium">Lead</th><th className="pb-3 pr-6 font-medium">Address</th><th className="pb-3 font-medium">Follow-up</th><th className="pb-3 font-medium">Status</th><th className="pb-3 font-medium">CX rating</th><th className="pb-3 text-right font-medium">Actions</th></tr></thead><tbody>{filteredLeads.map((lead) => <tr key={lead.id} className="border-b border-border/60 last:border-0"><td className="min-w-52 py-4 pr-6"><p className="font-medium">{lead.first_name} {lead.last_name}</p><p className="mt-1 break-words text-xs text-muted-foreground">{lead.company || lead.email || lead.phone || "No company or contact"}</p></td><td className="min-w-64 whitespace-normal py-4 pr-6 text-xs text-muted-foreground"><p>{lead.address || 'No address'}</p></td><td className="py-4 text-xs">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleDateString() : 'Not set'}</td><td className="py-4"><Badge className="border-primary/20 bg-primary/10 capitalize text-primary">{lead.status}</Badge>{lead.status === "converted" ? <p className="mt-1 text-xs text-muted-foreground">{lead.converted_at?.slice(0, 10) || "Date not set"} · {lead.sales_count || 0} sales<br/>{lead.sale_scope?.join(", ") || "What sold not set"}</p> : null}</td><td className="py-4 font-medium">{lead.customer_rating ? `${lead.customer_rating} / 5` : 'Not rated'}</td><td className="py-4"><div className="flex justify-end gap-1"><Button aria-label={`Edit ${lead.first_name}`} variant="ghost" size="icon" onClick={() => editLead(lead)}><Pencil /></Button><Button aria-label={`Delete ${lead.first_name}`} variant="ghost" size="icon" onClick={() => deleteLead(lead)}><Trash2 /></Button></div></td></tr>)}</tbody></table></div>}
+              {!ready ? <p className="py-12 text-center text-sm text-muted-foreground">Loading your records...</p> : filteredLeads.length === 0 ? <div className="py-14 text-center"><p className="font-medium">No leads found</p><p className="mt-2 text-sm text-muted-foreground">Add your first lead using the form.</p></div> : <><MobileLeadList leads={filteredLeads} onEdit={editLead} onDelete={deleteLead} /><div className="hidden overflow-x-auto md:block"><table className="min-w-[900px] w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="pb-3 pr-6 font-medium">Lead</th><th className="pb-3 pr-6 font-medium">Address</th><th className="pb-3 font-medium">Follow-up</th><th className="pb-3 font-medium">Status</th><th className="pb-3 font-medium">CX rating</th><th className="pb-3 text-right font-medium">Actions</th></tr></thead><tbody>{filteredLeads.map((lead) => <tr key={lead.id} className="border-b border-border/60 last:border-0"><td className="min-w-52 py-4 pr-6"><p className="font-medium">{lead.first_name} {lead.last_name}</p><p className="mt-1 break-words text-xs text-muted-foreground">{lead.company || lead.email || lead.phone || "No company or contact"}</p></td><td className="min-w-64 whitespace-normal py-4 pr-6 text-xs text-muted-foreground"><p>{lead.address || 'No address'}</p></td><td className="py-4 text-xs">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleDateString() : 'Not set'}</td><td className="py-4"><Badge className="border-primary/20 bg-primary/10 capitalize text-primary">{lead.status}</Badge>{lead.status === "converted" ? <p className="mt-1 text-xs text-muted-foreground">{lead.converted_at?.slice(0, 10) || "Date not set"} · {lead.sales_count || 0} sales<br/>{lead.sale_scope?.join(", ") || "What sold not set"}</p> : null}</td><td className="py-4"><RatingStars value={lead.customer_rating} /></td><td className="py-4"><div className="flex justify-end gap-1"><Button aria-label={`Edit ${lead.first_name}`} variant="ghost" size="icon" onClick={() => editLead(lead)}><Pencil /></Button><Button aria-label={`Delete ${lead.first_name}`} variant="ghost" size="icon" onClick={() => deleteLead(lead)}><Trash2 /></Button></div></td></tr>)}</tbody></table></div></>}
             </CardContent>
           </Card>
         </div>
