@@ -10,6 +10,6 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#f7fbf8",
     theme_color: "#008a3b",
     orientation: "portrait",
-    icons: [{ src: "/salesflow-icon.png", sizes: "1024x1024", type: "image/png", purpose: "maskable" }],
+    icons: [{ src: "/salesflow-icon.png", sizes: "512x512", type: "image/png", purpose: "maskable" }],
   };
 }
