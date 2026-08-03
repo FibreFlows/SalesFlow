@@ -22,11 +22,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 const nav = [
-  [LayoutDashboard, "Overview", true],
-  [Users, "Leads", false],
-  [Building2, "Accounts", false],
-  [Target, "Pipeline", false],
-  [CalendarDays, "Activities", false],
+  [LayoutDashboard, "Overview", true, "/"],
+  [Users, "Leads", false, "/pilot"],
+  [Building2, "Accounts", false, "#"],
+  [Target, "Pipeline", false, "#"],
+  [CalendarDays, "Activities", false, "#"],
 ] as const;
 
 const metrics = [
@@ -73,10 +73,10 @@ export default function Home() {
           </div>
         </div>
         <nav className="mt-10 space-y-1">
-          {nav.map(([Icon, label, active]) => (
+          {nav.map(([Icon, label, active, href]) => (
             <a
               key={label}
-              href="#"
+              href={href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
                 active ? "bg-primary/12 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"
               }`}
@@ -116,7 +116,7 @@ export default function Home() {
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Good morning, Aman.</h1>
               <p className="mt-2 text-muted-foreground">Here&apos;s what&apos;s moving across your fibre pipeline.</p>
             </div>
-            <Button><Plus /> Add lead</Button>
+            <a href="/pilot"><Button><Plus /> Add lead</Button></a>
           </div>
 
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

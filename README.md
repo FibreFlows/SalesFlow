@@ -2,6 +2,8 @@
 
 SalesFlow is a focused CRM workspace for fibre sales teams. Sprint 1 establishes the application shell, dashboard experience, Supabase integration, and secure CRM data model.
 
+The `/pilot` route provides a usable local lead workspace with browser persistence, search, editing, CSV export, and versioned JSON backup/restore. JSON backups are shaped for later import into the Supabase `leads` table.
+
 ## Stack
 
 - Next.js 16 App Router, React 19, and TypeScript
