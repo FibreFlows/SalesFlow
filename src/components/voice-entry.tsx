@@ -9,7 +9,7 @@ type Recognition = { continuous: boolean; interimResults: boolean; lang: string;
 type RecognitionConstructor = new () => Recognition;
 declare global { interface Window { SpeechRecognition?: RecognitionConstructor; webkitSpeechRecognition?: RecognitionConstructor } }
 
-export type VoiceFields = Partial<{ first_name: string; last_name: string; email: string; phone: string; secondary_phone: string; address: string; ncid: string; ecid: string; ban: string; mobility_ban: string; referrer_ban: string; competitor_name: string; is_with_competitor: boolean; customer_rating: string; notes: string; current_services: string[]; sale_scope: string[]; count_as_sale: boolean; status: "converted" }>;
+export type VoiceFields = Partial<{ first_name: string; last_name: string; email: string; phone: string; secondary_phone: string; address: string; ncid: string; ecid: string; ban: string; mobility_ban: string; referrer_ban: string; competitor_name: string; is_with_competitor: boolean; customer_rating: string; notes: string; current_services: string[]; sale_scope: string[]; count_as_sale: boolean; status: "converted"; sales_count: string; telus_sims_sold: string; koodo_sims_sold: string }>;
 const SERVICES: [string, RegExp][] = [["Fibre internet", /\b(fibre|fiber)\b/i], ["Copper internet", /\bcopper\b/i], ["Optik TV", /\b(optik|tv)\b/i], ["Home phone", /\bhome phone|landline\b/i], ["Security", /\bsecurity\b/i], ["Mobility", /\b(mobility|mobile|cell)\b/i]];
 const capture = (text: string, pattern: RegExp) => text.match(pattern)?.[1]?.trim() || "";
 
@@ -27,7 +27,7 @@ export function parseVoiceEntry(raw: string): VoiceFields {
     ncid: capture(raw, /ncid\s*[:#-]?\s*([a-z0-9-]+)/i), ecid: capture(raw, /ecid\s*[:#-]?\s*([a-z0-9-]+)/i),
     ban: capture(raw, /(?:hs\s+)?ban\s*[:#-]?\s*([a-z0-9-]+)/i), mobility_ban: capture(raw, /mob(?:ility)?\s+ban\s*[:#-]?\s*([a-z0-9-]+)/i),
     referrer_ban: capture(raw, /referr?er\s+ban\s*[:#-]?\s*([a-z0-9-]+)/i), competitor_name: competitor, is_with_competitor: Boolean(competitor),
-    customer_rating: capture(raw, /rating\s*(?:is)?\s*([1-5])/i), current_services: currentServices, sale_scope: saleScope, count_as_sale: converted, status: converted ? "converted" : undefined, notes: raw,
+    customer_rating: capture(raw, /rating\s*(?:is)?\s*([1-5])/i), current_services: currentServices, sale_scope: saleScope, count_as_sale: converted, status: converted ? "converted" : undefined, sales_count: capture(raw, /(?:number of sales done|sales done|sold)\s*(?:is|are|:)?\s*(\d+)/i), telus_sims_sold: capture(raw, /telus\s*(?:sims?)?\s*(?:sold)?\s*(\d+)/i), koodo_sims_sold: capture(raw, /koodo\s*(?:sims?)?\s*(?:sold)?\s*(\d+)/i), notes: raw,
   };
 }
 

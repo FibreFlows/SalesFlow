@@ -14,8 +14,8 @@ export function DashboardMetrics() {
     const load = async () => {
       const supabase = createClient();
       const [{ data: leads }, { data: jobs }] = await Promise.all([
-        supabase.from("leads").select("converted_at"),
-        supabase.from("jobs").select("status,completed_at,sale_converted_at"),
+        supabase.from("leads").select("converted_at,sales_count"),
+        supabase.from("jobs").select("status,completed_at,sale_converted_at,sales_count"),
       ]);
       const now = new Date();
       const year = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", year: "numeric" }).format(now));
@@ -30,11 +30,12 @@ export function DashboardMetrics() {
       const rows = leads || [];
       const allJobs = jobs || [];
       const completedJobs = allJobs.filter((job) => job.status === "completed");
+      const units = (row: { sales_count?: number | null }) => Math.max(Number(row.sales_count || 0), 1);
       setCounts({
-        monthSales: rows.filter((row) => { const date = parts(row.converted_at); return date?.year === year && date.month === month; }).length + allJobs.filter((job) => { const date = parts(job.sale_converted_at); return date?.year === year && date.month === month; }).length,
-        yearSales: rows.filter((row) => parts(row.converted_at)?.year === year).length + allJobs.filter((job) => parts(job.sale_converted_at)?.year === year).length,
+        monthSales: rows.filter((row) => { const date = parts(row.converted_at); return date?.year === year && date.month === month; }).reduce((sum, row) => sum + units(row), 0) + allJobs.filter((job) => { const date = parts(job.sale_converted_at); return date?.year === year && date.month === month; }).reduce((sum, job) => sum + units(job), 0),
+        yearSales: rows.filter((row) => parts(row.converted_at)?.year === year).reduce((sum, row) => sum + units(row), 0) + allJobs.filter((job) => parts(job.sale_converted_at)?.year === year).reduce((sum, job) => sum + units(job), 0),
         monthJobs: completedJobs.filter((job) => { const date = parts(job.completed_at); return date?.year === year && date.month === month; }).length,
-        lastMonthSales: rows.filter((row) => { const date = parts(row.converted_at); return date?.year === previousYear && date.month === previousMonth; }).length + allJobs.filter((job) => { const date = parts(job.sale_converted_at); return date?.year === previousYear && date.month === previousMonth; }).length,
+        lastMonthSales: rows.filter((row) => { const date = parts(row.converted_at); return date?.year === previousYear && date.month === previousMonth; }).reduce((sum, row) => sum + units(row), 0) + allJobs.filter((job) => { const date = parts(job.sale_converted_at); return date?.year === previousYear && date.month === previousMonth; }).reduce((sum, job) => sum + units(job), 0),
       });
     };
     const frame = requestAnimationFrame(load);
