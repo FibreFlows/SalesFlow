@@ -14,7 +14,7 @@ type Job = { id: string; customer_name: string | null; scheduled_date: string; s
 type Lead = { id: string; first_name: string; last_name: string; company: string; status: string; possible_rgu_sale: number | null; current_services: string[]; sale_scope: string[]; created_at: string; converted_at: string | null; sales_count: number; telus_sims_sold: number; koodo_sims_sold: number };
 const PRODUCTS = ["Fibre internet", "Copper internet", "Optik TV", "Home phone", "Security", "Mobility"];
 const possibleProducts = (services: string[] | undefined) => PRODUCTS.filter((product) => !(services || []).includes(product));
-const DEFAULT_PROFILE: Profile = { full_name: "Sahil Bhatia", tech_id: "X2002709", afl_email: "sahil.bhatia@aflglabal.com", telus_email: "sahil.bhatia1@telus.com" };
+const DEFAULT_PROFILE: Profile = { full_name: "", tech_id: "", afl_email: "", telus_email: "" };
 
 function periodStart(period: Period) {
   const date = new Date(); date.setHours(0, 0, 0, 0);
