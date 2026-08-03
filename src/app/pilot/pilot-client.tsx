@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Download, FileJson, LogOut, Pencil, Plus, Search, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Download, FileJson, LogOut, Moon, Pencil, Plus, Search, Sun, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
@@ -58,6 +58,7 @@ export function PilotClient() {
   const [query, setQuery] = useState("");
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [analyticsNow] = useState(() => Date.now());
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +80,21 @@ export function PilotClient() {
     const { data } = supabase.auth.onAuthStateChange((_event, session) => load(session?.user || null));
     return () => data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("salesflow.theme") as "light" | "dark" | null;
+    const selected = saved || "dark";
+    document.documentElement.classList.toggle("dark", selected === "dark");
+    const frame = requestAnimationFrame(() => setTheme(selected));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("salesflow.theme", next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+  }
 
   const filteredLeads = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -175,7 +191,7 @@ export function PilotClient() {
         <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Dashboard</Link>
         <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div><Badge className="border-primary/30 bg-primary/10 text-primary">CLOUD SALES TRACKER v0.4</Badge><h1 className="mt-3 text-3xl font-semibold tracking-tight">Telecom lead workspace</h1><p className="mt-2 text-sm text-muted-foreground">Your records are securely saved to your Supabase cloud account.</p></div>
-          <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={exportCsv}><Download /> CSV</Button><Button variant="outline" onClick={exportJson}><FileJson /> Backup</Button><Button variant="outline" onClick={() => fileRef.current?.click()}><Upload /> Restore</Button><Button variant="ghost" onClick={() => createClient().auth.signOut()}><LogOut /> Sign out</Button><input ref={fileRef} className="hidden" type="file" accept="application/json" onChange={importJson} /></div>
+          <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={toggleTheme}>{theme === "dark" ? <Sun /> : <Moon />} {theme === "dark" ? "Light" : "Dark"}</Button><Button variant="outline" onClick={exportCsv}><Download /> CSV</Button><Button variant="outline" onClick={exportJson}><FileJson /> Backup</Button><Button variant="outline" onClick={() => fileRef.current?.click()}><Upload /> Restore</Button><Button variant="ghost" onClick={() => createClient().auth.signOut()}><LogOut /> Sign out</Button><input ref={fileRef} className="hidden" type="file" accept="application/json" onChange={importJson} /></div>
         </div>
 
         <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -200,7 +216,7 @@ export function PilotClient() {
                 {form.is_with_competitor ? <Input aria-label="Competitor" placeholder="Competitor name" value={form.competitor_name} onChange={(e) => setForm({ ...form, competitor_name: e.target.value })} /> : null}
                 <div className="grid grid-cols-2 gap-3"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_in_contract} onChange={(e) => setForm({ ...form, is_in_contract: e.target.checked })} /> In contract</label><Input type="date" min="2000-01-01" max="2100-12-31" aria-label="Contract expiry" value={form.contract_expiry_date} onChange={(e) => setForm({ ...form, contract_expiry_date: e.target.value })} /></div>
                 <div className="grid grid-cols-2 gap-3"><Input type="number" min="0" step="0.01" aria-label="Customer current monthly bill" placeholder="Current monthly bill ($)" title="What the customer currently pays each month" value={form.current_monthly_cost} onChange={(e) => setForm({ ...form, current_monthly_cost: e.target.value })} /><select aria-label="Customer rating" className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={form.customer_rating} onChange={(e) => setForm({ ...form, customer_rating: e.target.value })}><option value="">Customer rating</option>{[1,2,3,4,5].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select></div>
-                <label className="block text-xs text-muted-foreground">Installation completed?<select aria-label="Installation completed" className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground" value={form.installation_completed} onChange={(e) => setForm({ ...form, installation_completed: e.target.value })}><option value="">Not specified</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+                <label className="block text-xs text-muted-foreground">Installation done by me?<select aria-label="Installation done by me" className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground" value={form.installation_completed} onChange={(e) => setForm({ ...form, installation_completed: e.target.value })}><option value="">Not specified</option><option value="yes">Yes</option><option value="no">No</option></select></label>
                 <div className="grid grid-cols-2 gap-3"><Input aria-label="Lead source" placeholder="Lead source (referral, door knock...)" title="Where this lead came from" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} /><Input type="number" min="0" step="0.01" aria-label="Estimated sale value" placeholder="Estimated sale value ($)" title="Expected value of this sale" value={form.estimated_value} onChange={(e) => setForm({ ...form, estimated_value: e.target.value })} /></div>
                 <select aria-label="Lead status" className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })}><option value="new">New</option><option value="contacted">Contacted</option><option value="qualified">Qualified</option><option value="unqualified">Unqualified</option><option value="converted">Converted</option></select>
                 <div className="grid grid-cols-2 gap-3"><label className="text-xs text-muted-foreground">Last contacted date (optional)<Input className="mt-1" type="date" min="2000-01-01" max="2100-12-31" value={form.last_contacted_at} onChange={(e) => setForm({ ...form, last_contacted_at: e.target.value })} /></label><label className="text-xs text-muted-foreground">Next follow-up date (optional)<Input className="mt-1" type="date" min="2000-01-01" max="2100-12-31" value={form.next_follow_up_at} onChange={(e) => setForm({ ...form, next_follow_up_at: e.target.value })} /></label></div>
@@ -215,7 +231,7 @@ export function PilotClient() {
           <Card>
             <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Leads</CardTitle><p className="mt-1 text-sm text-muted-foreground">{leads.length} saved record{leads.length === 1 ? "" : "s"}</p></div><div className="relative sm:w-72"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="Search leads..." value={query} onChange={(e) => setQuery(e.target.value)} /></div></CardHeader>
             <CardContent>
-              {!ready ? <p className="py-12 text-center text-sm text-muted-foreground">Loading your records...</p> : filteredLeads.length === 0 ? <div className="py-14 text-center"><p className="font-medium">No leads found</p><p className="mt-2 text-sm text-muted-foreground">Add your first lead using the form.</p></div> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="pb-3 font-medium">Lead</th><th className="pb-3 font-medium">IDs / address</th><th className="pb-3 font-medium">Follow-up</th><th className="pb-3 font-medium">Status</th><th className="pb-3 font-medium">CX rating</th><th className="pb-3 text-right font-medium">Actions</th></tr></thead><tbody>{filteredLeads.map((lead) => <tr key={lead.id} className="border-b border-border/60 last:border-0"><td className="py-4"><p className="font-medium">{lead.first_name} {lead.last_name}</p><p className="mt-1 text-xs text-muted-foreground">{lead.company || lead.email || lead.phone || "No company or contact"}</p></td><td className="py-4 text-xs text-muted-foreground"><p>{lead.ncid || lead.ecid || lead.ban ? `NCID ${lead.ncid || '—'} · ECID ${lead.ecid || '—'} · BAN ${lead.ban || '—'}` : 'No IDs'}</p><p className="mt-1">{lead.address || 'No address'}</p></td><td className="py-4 text-xs">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleString() : 'Not set'}</td><td className="py-4"><Badge className="border-primary/20 bg-primary/10 capitalize text-primary">{lead.status}</Badge></td><td className="py-4 font-medium">{lead.customer_rating ? `${lead.customer_rating} / 5` : 'Not rated'}</td><td className="py-4"><div className="flex justify-end gap-1"><Button aria-label={`Edit ${lead.first_name}`} variant="ghost" size="icon" onClick={() => editLead(lead)}><Pencil /></Button><Button aria-label={`Delete ${lead.first_name}`} variant="ghost" size="icon" onClick={() => deleteLead(lead)}><Trash2 /></Button></div></td></tr>)}</tbody></table></div>}
+              {!ready ? <p className="py-12 text-center text-sm text-muted-foreground">Loading your records...</p> : filteredLeads.length === 0 ? <div className="py-14 text-center"><p className="font-medium">No leads found</p><p className="mt-2 text-sm text-muted-foreground">Add your first lead using the form.</p></div> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="pb-3 font-medium">Lead</th><th className="pb-3 font-medium">IDs / address</th><th className="pb-3 font-medium">Follow-up</th><th className="pb-3 font-medium">Status</th><th className="pb-3 font-medium">CX rating</th><th className="pb-3 text-right font-medium">Actions</th></tr></thead><tbody>{filteredLeads.map((lead) => <tr key={lead.id} className="border-b border-border/60 last:border-0"><td className="py-4"><p className="font-medium">{lead.first_name} {lead.last_name}</p><p className="mt-1 text-xs text-muted-foreground">{lead.company || lead.email || lead.phone || "No company or contact"}</p></td><td className="py-4 text-xs text-muted-foreground"><p>{lead.ncid || lead.ecid || lead.ban ? `NCID ${lead.ncid || '—'} · ECID ${lead.ecid || '—'} · BAN ${lead.ban || '—'}` : 'No IDs'}</p><p className="mt-1">{lead.address || 'No address'}</p></td><td className="py-4 text-xs">{lead.next_follow_up_at ? new Date(lead.next_follow_up_at).toLocaleDateString() : 'Not set'}</td><td className="py-4"><Badge className="border-primary/20 bg-primary/10 capitalize text-primary">{lead.status}</Badge></td><td className="py-4 font-medium">{lead.customer_rating ? `${lead.customer_rating} / 5` : 'Not rated'}</td><td className="py-4"><div className="flex justify-end gap-1"><Button aria-label={`Edit ${lead.first_name}`} variant="ghost" size="icon" onClick={() => editLead(lead)}><Pencil /></Button><Button aria-label={`Delete ${lead.first_name}`} variant="ghost" size="icon" onClick={() => deleteLead(lead)}><Trash2 /></Button></div></td></tr>)}</tbody></table></div>}
             </CardContent>
           </Card>
         </div>
