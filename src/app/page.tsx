@@ -22,7 +22,6 @@ import { DashboardMetrics } from "@/components/dashboard-metrics";
 import { ActiveOpportunities } from "@/components/active-opportunities";
 import { ProductSalesTracker } from "@/components/product-sales-tracker";
 import { AppearanceControl } from "@/components/appearance-control";
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { BestPlans } from "@/components/best-plans";
 
 const nav = [
@@ -103,7 +102,6 @@ export default function Home() {
           </section>
         </div>
       </main>
-      <MobileBottomNav />
     </div>
   );
 }
