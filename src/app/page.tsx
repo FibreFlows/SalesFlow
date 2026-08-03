@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { LocalDateTime } from "@/components/local-date-time";
 
 const nav = [
   [LayoutDashboard, "Overview", true, "/"],
@@ -111,11 +112,7 @@ export default function Home() {
 
         <div className="mx-auto max-w-7xl p-5 sm:p-8">
           <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div>
-              <p className="mb-2 text-sm font-medium text-primary">THURSDAY, JULY 30</p>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Good morning, Sahil.</h1>
-              <p className="mt-2 text-muted-foreground">Here&apos;s what&apos;s moving across your fibre pipeline.</p>
-            </div>
+            <LocalDateTime />
             <a href="/pilot"><Button><Plus /> Add lead</Button></a>
           </div>
 

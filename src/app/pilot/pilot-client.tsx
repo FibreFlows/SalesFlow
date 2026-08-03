@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 type LeadStatus = "new" | "contacted" | "qualified" | "unqualified" | "converted";
 type Lead = {
@@ -209,7 +210,7 @@ export function PilotClient() {
                 <div className="grid grid-cols-3 gap-3"><Input aria-label="NCID" placeholder="NCID" value={form.ncid} onChange={(e) => setForm({ ...form, ncid: e.target.value })} /><Input aria-label="ECID" placeholder="ECID" value={form.ecid} onChange={(e) => setForm({ ...form, ecid: e.target.value })} /><Input aria-label="BAN" placeholder="BAN" value={form.ban} onChange={(e) => setForm({ ...form, ban: e.target.value })} /></div>
                 <Input type="email" aria-label="Email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 <div className="grid grid-cols-2 gap-3"><Input aria-label="Phone" placeholder="Primary phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /><Input aria-label="Secondary phone" placeholder="Secondary phone" value={form.secondary_phone} onChange={(e) => setForm({ ...form, secondary_phone: e.target.value })} /></div>
-                <Input aria-label="Address" placeholder="Service address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <AddressAutocomplete value={form.address} onChange={(address) => setForm((current) => ({ ...current, address }))} />
                 <div className="grid grid-cols-2 gap-3"><select aria-label="Preferred contact" className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={form.preferred_contact_method} onChange={(e) => setForm({ ...form, preferred_contact_method: e.target.value })}><option>Phone</option><option>Text</option><option>Email</option><option>In person</option></select><Input aria-label="Best contact time" placeholder="Best time to contact" value={form.best_contact_time} onChange={(e) => setForm({ ...form, best_contact_time: e.target.value })} /></div>
                 {([['current_services', 'Services customer has'], ['sale_scope', 'Scope of sale']] as const).map(([field, label]) => <fieldset key={field} className="rounded-md border border-input p-3"><legend className="px-1 text-xs font-medium">{label}</legend><div className="grid grid-cols-2 gap-2">{SERVICES.map((service) => <label key={service} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={form[field].includes(service)} onChange={() => toggleService(field, service)} />{service}</label>)}</div></fieldset>)}
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_with_competitor} onChange={(e) => setForm({ ...form, is_with_competitor: e.target.checked })} /> Currently with a competitor</label>
