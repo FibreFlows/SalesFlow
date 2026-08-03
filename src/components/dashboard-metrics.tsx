@@ -15,7 +15,7 @@ export function DashboardMetrics() {
       const supabase = createClient();
       const [{ data: leads }, { data: jobs }] = await Promise.all([
         supabase.from("leads").select("converted_at"),
-        supabase.from("jobs").select("completed_at").eq("status", "completed"),
+        supabase.from("jobs").select("status,completed_at,sale_converted_at"),
       ]);
       const now = new Date();
       const year = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", year: "numeric" }).format(now));
@@ -25,10 +25,11 @@ export function DashboardMetrics() {
         month: Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Edmonton", month: "numeric" }).format(new Date(value))),
       } : null;
       const rows = leads || [];
-      const completedJobs = jobs || [];
+      const allJobs = jobs || [];
+      const completedJobs = allJobs.filter((job) => job.status === "completed");
       setCounts({
-        julySales: rows.filter((row) => { const date = parts(row.converted_at); return date?.year === year && date.month === 7; }).length,
-        yearSales: rows.filter((row) => parts(row.converted_at)?.year === year).length,
+        julySales: rows.filter((row) => { const date = parts(row.converted_at); return date?.year === year && date.month === 7; }).length + allJobs.filter((job) => { const date = parts(job.sale_converted_at); return date?.year === year && date.month === 7; }).length,
+        yearSales: rows.filter((row) => parts(row.converted_at)?.year === year).length + allJobs.filter((job) => parts(job.sale_converted_at)?.year === year).length,
         monthJobs: completedJobs.filter((job) => { const date = parts(job.completed_at); return date?.year === year && date.month === month; }).length,
         yearJobs: completedJobs.filter((job) => parts(job.completed_at)?.year === year).length,
       });

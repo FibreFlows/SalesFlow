@@ -24,6 +24,7 @@ import { DashboardMetrics } from "@/components/dashboard-metrics";
 const nav = [
   [LayoutDashboard, "Overview", true, "/"],
   [Users, "Leads", false, "/pilot"],
+  [Target, "Sales Opportunities", false, "/opportunities"],
   [Building2, "Accounts", false, "#"],
   [Target, "Pipeline", false, "#"],
   [CalendarDays, "Daily Jobs", false, "/jobs"],
