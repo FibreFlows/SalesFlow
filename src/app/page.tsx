@@ -23,6 +23,7 @@ import { ActiveOpportunities } from "@/components/active-opportunities";
 import { ProductSalesTracker } from "@/components/product-sales-tracker";
 import { AppearanceControl } from "@/components/appearance-control";
 import { BestPlans } from "@/components/best-plans";
+import { UserAvatarLink } from "@/components/user-avatar-link";
 
 const nav = [
   [LayoutDashboard, "Overview", true, "/"],
@@ -82,7 +83,7 @@ export default function Home() {
           <div className="ml-auto flex items-center gap-2">
             <AppearanceControl />
             <Button variant="ghost" size="icon"><Bell /></Button>
-            <a href="/profile" aria-label="Open Sahil Bhatia profile" title="Profile" className="grid size-9 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground transition hover:ring-4 hover:ring-primary/15">SB</a>
+            <UserAvatarLink />
           </div>
         </header>
 

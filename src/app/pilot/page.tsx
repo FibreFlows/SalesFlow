@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function PilotPage() {
-  return <PilotClient />;
+  return <PilotClient listOnly />;
 }
